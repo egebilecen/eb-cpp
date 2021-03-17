@@ -58,5 +58,35 @@ namespace EB
                 return szName;
             }
         }
+
+        namespace Text
+        {
+            void center(std::string text)
+            {
+                ImVec2 window_size = ::ImGui::GetWindowSize();
+                ImVec2 text_size   = ::ImGui::CalcTextSize(text.c_str());
+
+                ::ImGui::SetCursorPosX((window_size.x / 2) - (text_size.x / 2));
+                ::ImGui::Text(text.c_str());
+            }
+
+            std::string padding(std::string text, unsigned int size, bool left_padding)
+            {
+                for(unsigned int i=0; i < size; i++)
+                {
+                    if(left_padding)
+                        text = " " + text;
+                    else
+                        text += " ";
+                }
+
+                return text;
+            }
+        }
+
+        void new_line()
+        {
+            ::ImGui::Text("");
+        }
     }
 }
