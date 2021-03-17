@@ -30,6 +30,7 @@ namespace EB
         //------- Getter Function Declarations
         std::string get_settings_str(SettingList& setting_list);
         int         get_setting_index_by_key(std::string key);
+        int         get_setting_index_by_value(std::string value, int nth=1);
 
     public:
         //---------------- Public
@@ -50,6 +51,9 @@ namespace EB
         //------- Getter Function Declarations
         template <typename T> 
         T get_setting(std::string key);
+
+        template <typename T> 
+        std::string get_setting_name_by_value(T value, int nth=1);
     };
 
     //------- Inline Template Function Definations
@@ -96,5 +100,15 @@ namespace EB
         convert >> value;
 
         return value;
+    }
+    
+    template<typename T>
+    inline std::string Settings::get_setting_name_by_value(T value, int nth)
+    {
+        int setting_index = this->get_setting_index_by_value(std::to_string(value), nth);
+
+        if(setting_index < 0) return "";
+
+        return this->settings[setting_index].first;
     }
 }
