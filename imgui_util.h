@@ -19,5 +19,13 @@ namespace EB
 
             std::string key_to_str(int vkey);
         }
+
+        namespace Text
+        {
+            void center(std::string text);
+            std::string padding(std::string text, unsigned int size, bool left_padding=true);
+        }
+        
+        void new_line();
     }
 }
