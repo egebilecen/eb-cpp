@@ -39,6 +39,7 @@ namespace EB
         //------- General Function Declarations
         bool load();
         bool save();
+        void reset_to_default_settings();
 
         //------- Setter Function Declarations
         void set_default_settings(SettingList& settings);
@@ -51,7 +52,7 @@ namespace EB
         T get_setting(std::string key);
     };
 
-    //---------------- Inline Template Function Definations
+    //------- Inline Template Function Definations
     //------- Setter Function
     template<typename T>
     inline bool Settings::set_setting(std::string key, T value, bool autosave)
