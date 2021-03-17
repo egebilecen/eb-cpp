@@ -87,6 +87,11 @@ namespace EB
         return true;
     }
 
+    void Settings::reset_to_default_settings()
+    {
+        this->settings = this->default_settings;
+    }
+
     //------- Setter Function Definations
     void Settings::set_default_settings(SettingList& settings)
     {
