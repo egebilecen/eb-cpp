@@ -26,6 +26,19 @@ namespace EB
         return -1;
     }
 
+    int Settings::get_setting_index_by_value(std::string value, int nth)
+    {
+        int found = 0;
+
+        for(size_t i=0; i < this->settings.size(); i++)
+        {
+            if(this->settings[i].second == value
+            && (found++) + 1 == nth) return i;
+        }
+
+        return -1;
+    }
+
     //---------------- Public
     //------- Constructor
     Settings::Settings(std::string settings_file) : settings_file(settings_file)
