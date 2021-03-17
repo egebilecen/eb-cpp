@@ -4,6 +4,7 @@
 #include "imgui.h"
 
 #include <string>
+#include "stdarg.h"
 
 namespace EB
 {
@@ -26,6 +27,11 @@ namespace EB
             std::string padding(std::string text, unsigned int size, bool left_padding=true);
         }
         
+        namespace Layout
+        {
+            void center_item(float item_width);
+        }
+
         void new_line();
     }
 }
