@@ -84,6 +84,18 @@ namespace EB
             }
         }
 
+        namespace Layout
+        {
+            void center_item(float item_width)
+            {
+                ImVec2 window_size  = ::ImGui::GetWindowSize();
+                float indent_amount = (window_size.x / 2) - (item_width / 2);
+
+                ::ImGui::SetNextItemWidth(item_width);
+                ::ImGui::SetCursorPosX(indent_amount);
+            }
+        }
+
         void new_line()
         {
             ::ImGui::Text("");
