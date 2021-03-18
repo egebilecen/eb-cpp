@@ -100,9 +100,30 @@ namespace EB
         return true;
     }
 
-    void Settings::reset_to_default_settings()
+    void Settings::reset_to_default_settings(std::vector<std::string>* settings_to_exclude)
     {
-        this->settings = this->default_settings;
+        Settings::SettingList settings;
+
+        for(size_t i=0; i < this->default_settings.size(); i++)
+        {
+            Settings::SettingPair default_setting = this->default_settings[i];
+
+            if(settings_to_exclude != nullptr
+            && std::find(settings_to_exclude->begin(), settings_to_exclude->end(), default_setting.first) != settings_to_exclude->end())
+            {
+                int setting_index = this->get_setting_index_by_key(default_setting.first);
+
+                if(setting_index > -1)
+                {
+                    settings.push_back(this->settings[setting_index]);
+                    continue;
+                }
+            }
+
+            settings.push_back(default_setting);
+        }
+
+        this->settings = settings;
     }
 
     //------- Setter Function Definations
