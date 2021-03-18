@@ -70,6 +70,15 @@ namespace EB
                 ::ImGui::Text(text.c_str());
             }
 
+            void right(std::string text)
+            {
+                ImVec2 window_size = ::ImGui::GetWindowSize();
+                ImVec2 text_size   = ::ImGui::CalcTextSize(text.c_str());
+
+                ::ImGui::SetCursorPosX(window_size.x - text_size.x);
+                ::ImGui::Text(text.c_str());
+            }
+
             std::string padding(std::string text, unsigned int size, bool left_padding)
             {
                 for(unsigned int i=0; i < size; i++)
