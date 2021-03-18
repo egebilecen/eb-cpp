@@ -40,7 +40,7 @@ namespace EB
         //------- General Function Declarations
         bool load();
         bool save();
-        void reset_to_default_settings();
+        void reset_to_default_settings(std::vector<std::string>* settings_to_exclude=nullptr);
 
         //------- Setter Function Declarations
         void set_default_settings(SettingList& settings);
