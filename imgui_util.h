@@ -24,6 +24,7 @@ namespace EB
         namespace Text
         {
             void center(std::string text);
+            void right(std::string text);
             std::string padding(std::string text, unsigned int size, bool left_padding=true);
         }
         
