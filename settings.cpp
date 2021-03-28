@@ -20,7 +20,7 @@ namespace EB
 
     int Settings::get_setting_index_by_key(std::string key)
     {
-        for(size_t i=0; i < this->settings.size(); i++)
+        for(int i=0; i < this->settings.size(); i++)
             if(this->settings[i].first == key) return i;
 
         return -1;
@@ -30,7 +30,7 @@ namespace EB
     {
         int found = 0;
 
-        for(size_t i=0; i < this->settings.size(); i++)
+        for(int i=0; i < this->settings.size(); i++)
         {
             if(this->settings[i].second == value
             && (found++) + 1 == nth) return i;
