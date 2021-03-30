@@ -14,7 +14,7 @@ namespace EB
             return d;
         }
 
-        std::int32_t get_time_since_epoch_ms()
+        long long get_time_since_epoch_ms()
         {
             using namespace std::chrono;
 

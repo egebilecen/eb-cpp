@@ -24,7 +24,7 @@ namespace EB
         };
 
         std::tm convert_date_to_tm(Date const& date);
-        std::int32_t get_time_since_epoch_ms();
+        long long get_time_since_epoch_ms();
         Date get_local_date();
         double get_difference_between_dates(Date const& date1, Date const& date2);
     }
