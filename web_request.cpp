@@ -48,7 +48,7 @@ namespace EB
                 curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 
                 curl_easy_perform(curl);
-                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &last_http_code);
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &_last_http_code);
                 curl_easy_cleanup(curl);
 
                 fclose(fp);
@@ -56,7 +56,7 @@ namespace EB
                 return true;
             }
 
-            last_http_code = -1;
+            _last_http_code = -1;
             return false;
         }
     
@@ -72,22 +72,27 @@ namespace EB
                 std::string post_field_str = _convert_post_field_to_str(post_field);
 
                 curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-                curl_easy_setopt(curl, CURLOPT_POST, 1L);
                 curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_field_str.c_str());
 
-                curl_easy_setopt(curl, CURLOPT_USERAGENT, useragent.c_str());
+                curl_easy_setopt(curl, CURLOPT_USERAGENT, _useragent.c_str());
+
+                if(url.substr(0, 6) == "https:")
+                {
+                    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+                    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1L);
+                }
 
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _write_string);
                 curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
 
                 curl_easy_perform(curl);
-                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &last_http_code);
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &_last_http_code);
                 curl_easy_cleanup(curl);
 
                 return true;
             }
 
-            last_http_code = -1;
+            _last_http_code = -1;
             return false;
         }
 
@@ -103,20 +108,25 @@ namespace EB
                 curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
                 curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
 
-                curl_easy_setopt(curl, CURLOPT_USERAGENT, useragent.c_str());
+                curl_easy_setopt(curl, CURLOPT_USERAGENT, _useragent.c_str());
 
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _write_string);
                 curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
 
                 curl_easy_perform(curl);
-                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &last_http_code);
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &_last_http_code);
                 curl_easy_cleanup(curl);
 
                 return true;
             }
 
-            last_http_code = -1;
+            _last_http_code = -1;
             return false;
+        }
+
+        long get_last_http_code()
+        {
+            return _last_http_code;
         }
     }
 }
