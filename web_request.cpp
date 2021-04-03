@@ -4,14 +4,13 @@ namespace EB
 {
     namespace WebRequest
     {
-        size_t _write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) 
+        size_t _write_data(void* ptr, size_t size, size_t nmemb, void* stream)
         {
-            size_t written;
-            written = fwrite(ptr, size, nmemb, stream);
+            size_t written = fwrite(ptr, size, nmemb, (FILE*) stream);
             return written;
         }
 
-        size_t _write_string(void *ptr, size_t size, size_t nmemb, std::string* data) 
+        size_t _write_string(void* ptr, size_t size, size_t nmemb, std::string* data) 
         {
             data->append((char*) ptr, size * nmemb);
             return size * nmemb;
@@ -34,24 +33,30 @@ namespace EB
 
         bool download_file(std::string url, std::string file_path) 
         {
-            CURL *curl;
-            FILE *fp;
+            CURL* curl;
+            FILE* file;
 
             curl = curl_easy_init();
 
             if(curl)
             {
-                fp = fopen(file_path.c_str(), "wb");
+                file = fopen(file_path.c_str(), "wb");
 
-                curl_easy_setopt(curl, CURLOPT_URL, url);
+                curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, _write_data);
-                curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
+
+                if(url.substr(0, 6) == "https:")
+                {
+                    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+                    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1L);
+                }
 
                 curl_easy_perform(curl);
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &_last_http_code);
                 curl_easy_cleanup(curl);
 
-                fclose(fp);
+                fclose(file);
 
                 return true;
             }

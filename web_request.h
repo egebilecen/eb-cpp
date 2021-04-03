@@ -25,8 +25,8 @@ namespace EB
         static long        _last_http_code = -1;
         static std::string _useragent      = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36";
 
-        size_t _write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
-        size_t _write_string(void *ptr, size_t size, size_t nmemb, std::string* data);
+        size_t _write_data(void* ptr, size_t size, size_t nmemb, void* stream);
+        size_t _write_string(void* ptr, size_t size, size_t nmemb, std::string* data);
         std::string _convert_post_field_to_str(PostField& post_field);
 
         bool download_file(std::string url, std::string file_path);
