@@ -16,5 +16,10 @@ namespace EB
 
             return result;
         }
+
+        std::wstring to_wstring(std::string const& str)
+        {
+            return std::wstring(str.begin(), str.end());
+        }
     }
 }
