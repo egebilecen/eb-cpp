@@ -10,14 +10,14 @@ namespace EB
             if(process_id   == nullptr
             && process_name == nullptr) return;
 
-            PROCESSENTRY32* process_info = new PROCESSENTRY32();
+            PROCESSENTRY32W* process_info = new PROCESSENTRY32W();
             process_info->dwSize = sizeof(*process_info);
 
             HANDLE processes_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
 
             if(processes_snapshot == INVALID_HANDLE_VALUE) return;
 
-            if(Process32First(processes_snapshot, process_info))
+            if(Process32FirstW(processes_snapshot, process_info))
             {
                 do
                 {
@@ -40,7 +40,7 @@ namespace EB
                         }
                     }
                 } 
-                while(Process32Next(processes_snapshot, process_info));
+                while(Process32NextW(processes_snapshot, process_info));
             }
 
         loop_end:
@@ -69,7 +69,7 @@ namespace EB
         }
 
         // Public Method(s)
-        PROCESSENTRY32 const* ExternalProcess::get_process_info() const
+        PROCESSENTRY32W const* ExternalProcess::get_process_info() const
         {
             return this->process_info;
         }
@@ -83,7 +83,7 @@ namespace EB
         {
             if(this->process_info == nullptr) return false;
 
-            MODULEENTRY32 module_info;
+            MODULEENTRY32W module_info;
             module_info.dwSize = sizeof(module_info);
 
             HANDLE modules_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, *this->get_process_id());
@@ -92,7 +92,7 @@ namespace EB
 
             this->module_list.clear();
 
-            if(Module32First(modules_snapshot, &module_info))
+            if(Module32FirstW(modules_snapshot, &module_info))
             {
                 do
                 {
@@ -102,16 +102,51 @@ namespace EB
 
                     this->module_list.push_back(mod_info);
                 } 
-                while(Module32Next(modules_snapshot, &module_info));
+                while(Module32NextW(modules_snapshot, &module_info));
             }
 
             CloseHandle(modules_snapshot);
             return true;
         }
 
+        bool ExternalProcess::load_thread_list()
+        {
+            if(this->process_info == nullptr) return false;
+
+            THREADENTRY32 thread_info;
+            thread_info.dwSize = sizeof(thread_info);
+
+            HANDLE thread_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, NULL);
+
+            if(thread_snapshot == INVALID_HANDLE_VALUE) return false;
+
+            this->thread_list.clear();
+
+            if(Thread32First(thread_snapshot, &thread_info))
+            {
+                do
+                {
+                    if(thread_info.th32OwnerProcessID == *this->get_process_id())
+                    {
+                        ThreadInfo th_info(thread_info.th32ThreadID, thread_info.th32OwnerProcessID, thread_info.tpBasePri);
+                        this->thread_list.push_back(th_info);
+                    }
+                } 
+                while(Thread32Next(thread_snapshot, &thread_info));
+            }
+
+            CloseHandle(thread_snapshot);
+            return true;
+        }
+
         std::vector<Process::ModuleInfo> const* ExternalProcess::get_module_list() const
         {
             return &this->module_list;
+        }
+
+        std::vector<ThreadInfo> const* ExternalProcess::get_thread_list() const
+        {
+            return &this->thread_list;
         }
 
         HANDLE ExternalProcess::get_process_handle() const
@@ -144,21 +179,21 @@ namespace EB
 
             HMODULE get_module_handle()
             {
-                return GetModuleHandle(NULL);
+                return GetModuleHandleW(NULL);
             }
 
             std::vector<ModuleInfo> get_module_list()
             {
                 std::vector<ModuleInfo> mod_list;
 
-                MODULEENTRY32 module_info;
+                MODULEENTRY32W module_info;
                 module_info.dwSize = sizeof(module_info);
 
                 HANDLE modules_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, get_process_id());
 
                 if(modules_snapshot == INVALID_HANDLE_VALUE) return mod_list;
 
-                if(Module32First(modules_snapshot, &module_info))
+                if(Module32FirstW(modules_snapshot, &module_info))
                 {
                     do
                     {
@@ -168,7 +203,7 @@ namespace EB
 
                         mod_list.push_back(mod_info);
                     } 
-                    while(Module32Next(modules_snapshot, &module_info));
+                    while(Module32NextW(modules_snapshot, &module_info));
                 }
 
                 CloseHandle(modules_snapshot);
@@ -187,108 +222,107 @@ namespace EB
             }
         }
 
-        namespace Injector
+        ExternalProcess* Injector::external_process = nullptr;
+
+        void Injector::set_target_process(ExternalProcess* external_process)
         {
-            ExternalProcess* ExternalInjector::external_process = nullptr;
+            Injector::external_process = external_process;
+        }
 
-            void ExternalInjector::set_target_process(ExternalProcess* external_process)
-            {
-                ExternalInjector::external_process = external_process;
-            }
+        bool Injector::inject_via_loadlibraryw(std::string const& dll_path)
+        {
+            if(Injector::external_process == nullptr) return false;
 
-            bool ExternalInjector::inject_via_loadlibraryw(std::string const& dll_path)
-            {
-                if(ExternalInjector::external_process == nullptr) return false;
+            LPVOID lp_loadlibraryw = GetProcAddress(GetModuleHandle(L"kernel32.dll"), "LoadLibraryW");
 
-                LPVOID lp_loadlibraryw = GetProcAddress(GetModuleHandle(L"kernel32.dll"), "LoadLibraryW");
+            // GetProcAddress failed
+            if(!lp_loadlibraryw) return false;
 
-                // GetProcAddress failed
-                if(!lp_loadlibraryw) return false;
+            // Get target process' handle
+            HANDLE h_target_process = Injector::external_process->get_process_handle();
 
-                // Get target process' handle
-                HANDLE h_target_process = ExternalInjector::external_process->get_process_handle();
+            // Failed to get handle of target process
+            if(!h_target_process) return false;
 
-                // Failed to get handle of target process
-                if(!h_target_process) return false;
+            // Allocate dll_path string in target process' memory
+            std::wstring dll_path_w = String::to_wstring(dll_path);
+            WCHAR dll_path_str[MAX_PATH];
+            ZeroMemory(dll_path_str, sizeof(dll_path_str));
+            dll_path_w.copy(dll_path_str, MAX_PATH);
 
-                // Allocate dll_path string in target process' memory
-                std::wstring dll_path_w = String::to_wstring(dll_path);
-                WCHAR dll_path_str[MAX_PATH];
-                ZeroMemory(dll_path_str, sizeof(dll_path_str));
-                dll_path_w.copy(dll_path_str, MAX_PATH);
-
-                LPVOID lp_dll_path = VirtualAllocEx(h_target_process, NULL, sizeof(dll_path_str), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            LPVOID lp_dll_path = VirtualAllocEx(h_target_process, NULL, sizeof(dll_path_str), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
                 
-                // Write data to memory
-                WriteProcessMemory(h_target_process, lp_dll_path, dll_path_str, sizeof(dll_path_str), NULL);
+            // Write data to memory
+            WriteProcessMemory(h_target_process, lp_dll_path, dll_path_str, sizeof(dll_path_str), NULL);
 
-                // Create thread to execute LoadLibraryW function
-                HANDLE h_thread = CreateRemoteThread(h_target_process, NULL, NULL, 
-                                                     (LPTHREAD_START_ROUTINE)lp_loadlibraryw, lp_dll_path, 
-                                                     NULL, NULL);
+            // Create thread to execute LoadLibraryW function
+            HANDLE h_thread = CreateRemoteThread(h_target_process, NULL, NULL, 
+                                                    (LPTHREAD_START_ROUTINE)lp_loadlibraryw, lp_dll_path, 
+                                                    NULL, NULL);
 
-                CloseHandle(h_target_process);
+            CloseHandle(h_target_process);
 
-                if(!h_thread) return false;
+            if(!h_thread) return false;
 
-                return true;
-            }
+            return true;
+        }
 
-            bool ExternalInjector::inject_via_ldrloaddll(std::string const& dll_path)
+        bool Injector::inject_via_ldrloaddll(std::string const& dll_path)
+        {
+            throw std::exception("Not yet implemented.");
+        }
+
+        bool Injector::inject_via_setwindowshookex(std::string const& dll_path)
+        {
+            std::wstring dll_path_w = String::to_wstring(dll_path);
+
+            HMODULE dll = LoadLibraryW(dll_path_w.c_str());
+
+            // Couldn't find DLL
+            if(!dll) return false;
+
+            HOOKPROC addr = (HOOKPROC)GetProcAddress(dll, "HookMain");
+
+            // Couldn't find function
+            if(!addr) return false;
+
+            HHOOK hook_handle = SetWindowsHookExW(WH_KEYBOARD, addr, dll, 0);
+
+            // Couldn't hook the idHook
+            if(!hook_handle) return false;
+
+            // UnhookWindowsHookEx(hook_handle);
+        }
+
+        bool Injector::inject_via_thread_hijacking(std::string const& dll_path)
+        {
+            throw std::exception("Not yet implemented.");
+        }
+
+        bool Injector::inject_dll(InjectionMethod inject_method, std::string const& dll_path)
+        {
+            if(Injector::external_process == nullptr) return false;
+
+            switch(inject_method)
             {
-                if(ExternalInjector::external_process == nullptr) return false;
+                case InjectionMethod::LoadLibraryW:
+                    return inject_via_loadlibraryw(dll_path);
+                break;
 
-                LPVOID lp_ldr_load_dll = GetProcAddress(GetModuleHandle(L"ntdll.dll"), "LdrLoadDll");
+                case InjectionMethod::LdrLoadDll:
+                    return inject_via_ldrloaddll(dll_path);
+                break;
 
-                // GetProcAddress failed
-                if(!lp_ldr_load_dll) return false;
+                case InjectionMethod::SetWindowsHookExW:
+                    return inject_via_setwindowshookex(dll_path);
+                break;
 
-                return true;
+                case InjectionMethod::ThreadHijacking:
+                    return inject_via_thread_hijacking(dll_path);
+                break;
             }
 
-            bool ExternalInjector::inject_via_setwindowshookex(std::string const& dll_path)
-            {
-                std::wstring dll_path_w = String::to_wstring(dll_path);
-
-                HMODULE dll = LoadLibraryW(dll_path_w.c_str());
-
-                // Couldn't find DLL
-                if(!dll) return false;
-
-                HOOKPROC addr = (HOOKPROC)GetProcAddress(dll, "HookMain");
-
-                // Couldn't find function
-                if(!addr) return false;
-
-                HHOOK hook_handle = SetWindowsHookExW(WH_KEYBOARD, addr, dll, 0);
-
-                // Couldn't hook the idHook
-                if(!hook_handle) return false;
-
-                // UnhookWindowsHookEx(hook_handle);
-            }
-
-            bool ExternalInjector::inject_dll(InjectionMethod inject_method, std::string const& dll_path)
-            {
-                if(ExternalInjector::external_process == nullptr) return false;
-
-                switch(inject_method)
-                {
-                    case InjectionMethod::LoadLibraryW:
-                        return inject_via_loadlibraryw(dll_path);
-                    break;
-
-                    case InjectionMethod::LdrLoadDll:
-                        return inject_via_ldrloaddll(dll_path);
-                    break;
-
-                    case InjectionMethod::SetWindowsHookEx_:
-                        return inject_via_setwindowshookex(dll_path);
-                    break;
-                }
-
-                return false;
-            }
+            return false;
         }
     }
 }
