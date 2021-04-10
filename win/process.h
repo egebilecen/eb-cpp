@@ -52,18 +52,38 @@ namespace EB
             // Method(s)
             PROCESSENTRY32 const* get_process_info() const;
             DWORD          const* get_process_id()   const;
-            HANDLE         const* get_handle()       const;
+            HANDLE get_process_handle() const;
 
             bool load_module_list();
             std::vector<ModuleInfo> const* get_module_list() const;
+            ModuleInfo const* get_module(std::string const& module_name) const;
         };
 
         namespace InternalProcess
         {
             DWORD get_process_id();
             HANDLE get_process_handle();
-
+            HMODULE get_module_handle();
             std::vector<ModuleInfo> get_module_list();
+            ModuleInfo const* get_module(std::vector<ModuleInfo> const* module_list, std::string const& module_name);
+        }
+
+        namespace Injector
+        {
+            enum class InjectionMethod
+            {
+                LoadLibraryW
+            };
+
+            static class ExternalInjector
+            {
+            public:
+                static ExternalProcess* external_process;
+
+                static void set_target_process(ExternalProcess* external_process);
+                static bool inject_via_loadlibraryw(std::string const& dll_path);
+                static bool inject_dll(InjectionMethod inject_method, std::string const& dll_path);
+            };
         }
     }
 }

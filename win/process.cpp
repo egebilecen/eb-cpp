@@ -8,7 +8,7 @@ namespace EB
         void ExternalProcess::get_process_info(DWORD const* process_id, std::string const* process_name)
         {
             if(process_id   == nullptr
-               && process_name == nullptr) return;
+            && process_name == nullptr) return;
 
             PROCESSENTRY32* process_info = new PROCESSENTRY32();
             process_info->dwSize = sizeof(*process_info);
@@ -45,10 +45,6 @@ namespace EB
 
         loop_end:
             CloseHandle(processes_snapshot);
-
-            if(this->process_info != nullptr)
-                this->process_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, *this->get_process_id());
-
             return;
         }
 
@@ -81,11 +77,6 @@ namespace EB
         DWORD const* ExternalProcess::get_process_id() const
         {
             return this->process_info != nullptr ? &this->process_info->th32ProcessID : nullptr;
-        }
-
-        HANDLE const* ExternalProcess::get_handle() const
-        {
-            return this->process_info != nullptr ? &this->process_handle : nullptr;
         }
 
         bool ExternalProcess::load_module_list()
@@ -123,6 +114,22 @@ namespace EB
             return &this->module_list;
         }
 
+        HANDLE ExternalProcess::get_process_handle() const
+        {
+            return OpenProcess(PROCESS_ALL_ACCESS, FALSE, *this->get_process_id());
+        }
+
+        ModuleInfo const* ExternalProcess::get_module(std::string const& module_name) const
+        {
+            for(size_t i=0; i < this->module_list.size(); i++)
+            {
+                if(this->module_list[i].module_name == String::to_wstring(module_name))
+                    return &this->module_list[i];
+            }
+
+            return nullptr;
+        }
+
         namespace InternalProcess
         {
             DWORD get_process_id()
@@ -133,6 +140,11 @@ namespace EB
             HANDLE get_process_handle()
             {
                 return GetCurrentProcess();
+            }
+
+            HMODULE get_module_handle()
+            {
+                return GetModuleHandle(NULL);
             }
 
             std::vector<ModuleInfo> get_module_list()
@@ -161,6 +173,79 @@ namespace EB
 
                 CloseHandle(modules_snapshot);
                 return mod_list;
+            }
+
+            ModuleInfo const* get_module(std::vector<ModuleInfo> const* module_list, std::string const& module_name)
+            {
+                for(size_t i=0; i < module_list->size(); i++)
+                {
+                    if((*module_list)[i].module_name == String::to_wstring(module_name))
+                        return &(*module_list)[i];
+                }
+
+                return nullptr;
+            }
+        }
+
+        namespace Injector
+        {
+            ExternalProcess* ExternalInjector::external_process = nullptr;
+
+            void ExternalInjector::set_target_process(ExternalProcess* external_process)
+            {
+                ExternalInjector::external_process = external_process;
+            }
+
+            bool ExternalInjector::inject_via_loadlibraryw(std::string const& dll_path)
+            {
+                if(ExternalInjector::external_process == nullptr) return false;
+
+                LPVOID lp_loadlibraryw = GetProcAddress(GetModuleHandle(L"kernel32.dll"), "LoadLibraryW");
+
+                // GetProcAddress failed
+                if(!lp_loadlibraryw) return false;
+
+                // Get target process' handle
+                HANDLE h_target_process = ExternalInjector::external_process->get_process_handle();
+
+                // Failed to get handle of target process
+                if(!h_target_process) return false;
+
+                // Allocate dll_path string in target process' memory
+                std::wstring dll_path_w = String::to_wstring(dll_path);
+                WCHAR dll_path_str[MAX_PATH];
+                ZeroMemory(dll_path_str, sizeof(dll_path_str));
+                dll_path_w.copy(dll_path_str, MAX_PATH);
+
+                LPVOID lp_dll_path = VirtualAllocEx(h_target_process, NULL, sizeof(dll_path_str), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+                
+                // Write data to memory
+                WriteProcessMemory(h_target_process, lp_dll_path, dll_path_str, sizeof(dll_path_str), NULL);
+
+                // Create thread to execute LoadLibraryW function
+                HANDLE h_thread = CreateRemoteThread(h_target_process, NULL, NULL, 
+                                                     (LPTHREAD_START_ROUTINE)lp_loadlibraryw, lp_dll_path, 
+                                                     NULL, NULL);
+
+                CloseHandle(h_target_process);
+
+                if(!h_thread) return false;
+
+                return true;
+            }
+
+            bool ExternalInjector::inject_dll(InjectionMethod inject_method, std::string const& dll_path)
+            {
+                if(ExternalInjector::external_process == nullptr) return false;
+
+                switch(inject_method)
+                {
+                    case InjectionMethod::LoadLibraryW:
+                        return inject_via_loadlibraryw(dll_path);
+                    break;
+                }
+
+                return false;
             }
         }
     }
