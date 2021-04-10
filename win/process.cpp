@@ -222,16 +222,16 @@ namespace EB
             }
         }
 
-        ExternalProcess* Injector::external_process = nullptr;
+        ExternalProcess* Injector::target_process = nullptr;
 
-        void Injector::set_target_process(ExternalProcess* external_process)
+        void Injector::set_target_process(ExternalProcess* target_process)
         {
-            Injector::external_process = external_process;
+            Injector::target_process = target_process;
         }
 
         bool Injector::inject_via_loadlibraryw(std::string const& dll_path)
         {
-            if(Injector::external_process == nullptr) return false;
+            if(Injector::target_process == nullptr) return false;
 
             LPVOID lp_loadlibraryw = GetProcAddress(GetModuleHandle(L"kernel32.dll"), "LoadLibraryW");
 
@@ -239,7 +239,7 @@ namespace EB
             if(!lp_loadlibraryw) return false;
 
             // Get target process' handle
-            HANDLE h_target_process = Injector::external_process->get_process_handle();
+            HANDLE h_target_process = Injector::target_process->get_process_handle();
 
             // Failed to get handle of target process
             if(!h_target_process) return false;
@@ -296,12 +296,49 @@ namespace EB
 
         bool Injector::inject_via_thread_hijacking(std::string const& dll_path)
         {
-            throw std::exception("Not yet implemented.");
+            if(Injector::target_process == nullptr) return false;
+
+            Injector::target_process->load_thread_list();
+            std::vector<ThreadInfo> const* thread_list = Injector::target_process->get_thread_list();
+
+            if(thread_list->size() < 1) return false;
+
+            HANDLE h_thread = OpenThread(THREAD_ALL_ACCESS, NULL, (*thread_list)[0].thread_id);
+
+            if(!h_thread) return false;
+
+            HANDLE target_process = Injector::target_process->get_process_handle();
+
+        #ifdef __WIN64
+            LPVOID lp_shellcode = VirtualAllocEx(target_process, NULL, sizeof(shellcode_x64_thread_hijacking), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+            WriteProcessMemory(target_process, lp_shellcode, shellcode_x64_thread_hijacking, sizeof(shellcode_x64_thread_hijacking), NULL);
+        #else
+            LPVOID lp_shellcode = VirtualAllocEx(target_process, NULL, sizeof(shellcode_x32_thread_hijacking), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+            WriteProcessMemory(target_process, lp_shellcode, shellcode_x32_thread_hijacking, sizeof(shellcode_x32_thread_hijacking), NULL);
+        #endif
+
+            SuspendThread(h_thread);
+
+            CONTEXT context;
+            context.ContextFlags = CONTEXT_FULL;
+
+            GetThreadContext(h_thread, &context);
+            
+        #ifdef __WIN64
+            context.Rip = (DWORD_PTR)lp_shellcode;
+        #else
+            context.Eip = (DWORD_PTR)lp_shellcode;
+        #endif
+            
+            SetThreadContext(h_thread, &context);
+            ResumeThread(h_thread);
+
+            return true;
         }
 
         bool Injector::inject_dll(InjectionMethod inject_method, std::string const& dll_path)
         {
-            if(Injector::external_process == nullptr) return false;
+            if(Injector::target_process == nullptr) return false;
 
             switch(inject_method)
             {

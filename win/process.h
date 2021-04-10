@@ -1,12 +1,13 @@
 #pragma once
 
-#include <windows.h>
+#include <Windows.h>
 #include <tlhelp32.h>
 #include <SubAuth.h>
 
 #include <string>
 #include <vector>
 
+#include "shellcode.h"
 #include "../string.h"
 
 namespace EB
@@ -95,9 +96,9 @@ namespace EB
                 ThreadHijacking
             };
 
-            static ExternalProcess* external_process;
+            static ExternalProcess* target_process;
 
-            static void set_target_process(ExternalProcess* external_process);
+            static void set_target_process(ExternalProcess* target_process);
             static bool inject_via_loadlibraryw(std::string const& dll_path);
             // Not implemented yet
             static bool inject_via_ldrloaddll(std::string const& dll_path);
