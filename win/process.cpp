@@ -234,6 +234,40 @@ namespace EB
                 return true;
             }
 
+            bool ExternalInjector::inject_via_ldrloaddll(std::string const& dll_path)
+            {
+                if(ExternalInjector::external_process == nullptr) return false;
+
+                LPVOID lp_ldr_load_dll = GetProcAddress(GetModuleHandle(L"ntdll.dll"), "LdrLoadDll");
+
+                // GetProcAddress failed
+                if(!lp_ldr_load_dll) return false;
+
+                return true;
+            }
+
+            bool ExternalInjector::inject_via_setwindowshookex(std::string const& dll_path)
+            {
+                std::wstring dll_path_w = String::to_wstring(dll_path);
+
+                HMODULE dll = LoadLibraryW(dll_path_w.c_str());
+
+                // Couldn't find DLL
+                if(!dll) return false;
+
+                HOOKPROC addr = (HOOKPROC)GetProcAddress(dll, "HookMain");
+
+                // Couldn't find function
+                if(!addr) return false;
+
+                HHOOK hook_handle = SetWindowsHookExW(WH_KEYBOARD, addr, dll, 0);
+
+                // Couldn't hook the idHook
+                if(!hook_handle) return false;
+
+                // UnhookWindowsHookEx(hook_handle);
+            }
+
             bool ExternalInjector::inject_dll(InjectionMethod inject_method, std::string const& dll_path)
             {
                 if(ExternalInjector::external_process == nullptr) return false;
@@ -242,6 +276,14 @@ namespace EB
                 {
                     case InjectionMethod::LoadLibraryW:
                         return inject_via_loadlibraryw(dll_path);
+                    break;
+
+                    case InjectionMethod::LdrLoadDll:
+                        return inject_via_ldrloaddll(dll_path);
+                    break;
+
+                    case InjectionMethod::SetWindowsHookEx_:
+                        return inject_via_setwindowshookex(dll_path);
                     break;
                 }
 

@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <tlhelp32.h>
+#include <SubAuth.h>
 
 #include <string>
 #include <vector>
@@ -72,7 +73,9 @@ namespace EB
         {
             enum class InjectionMethod
             {
-                LoadLibraryW
+                LoadLibraryW,
+                LdrLoadDll,
+                SetWindowsHookEx_
             };
 
             static class ExternalInjector
@@ -82,6 +85,10 @@ namespace EB
 
                 static void set_target_process(ExternalProcess* external_process);
                 static bool inject_via_loadlibraryw(std::string const& dll_path);
+                static bool inject_via_ldrloaddll(std::string const& dll_path);
+                // Use it for to load a DLL that will inject the DLL that will perform
+                // memory manipulation. Do not forget to check exe name.
+                static bool inject_via_setwindowshookex(std::string const& dll_path);
                 static bool inject_dll(InjectionMethod inject_method, std::string const& dll_path);
             };
         }
