@@ -72,6 +72,7 @@ namespace EB
             bool load_module_list();
             bool load_thread_list();
             std::vector<ModuleInfo> const* get_module_list() const;
+            // TODO: Add support for NtQuerySystemInformation() to get thread list.
             std::vector<ThreadInfo> const* get_thread_list() const;
             ModuleInfo const* get_module(std::string const& module_name) const;
         };

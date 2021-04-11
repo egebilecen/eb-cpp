@@ -106,6 +106,7 @@ namespace EB
             }
 
             CloseHandle(modules_snapshot);
+            SetLastError(NO_ERROR);
             return true;
         }
 
@@ -136,6 +137,7 @@ namespace EB
             }
 
             CloseHandle(thread_snapshot);
+            SetLastError(NO_ERROR);
             return true;
         }
 
@@ -207,6 +209,7 @@ namespace EB
                 }
 
                 CloseHandle(modules_snapshot);
+                SetLastError(NO_ERROR);
                 return mod_list;
             }
 
@@ -247,6 +250,7 @@ namespace EB
             // Allocate dll_path string in target process' memory
             std::wstring dll_path_w = String::to_wstring(dll_path);
             WCHAR dll_path_str[MAX_PATH];
+
             ZeroMemory(dll_path_str, sizeof(dll_path_str));
             dll_path_w.copy(dll_path_str, MAX_PATH);
 
@@ -309,15 +313,29 @@ namespace EB
 
             if(!h_thread) return false;
 
-            HANDLE target_process = Injector::target_process->get_process_handle();
+            LPVOID lp_loadlibraryw = GetProcAddress(GetModuleHandle(L"kernel32.dll"), "LoadLibraryW");
+
+            if(!lp_loadlibraryw) return false;
 
         #ifdef _WIN64
-            LPVOID lp_shellcode = VirtualAllocEx(target_process, NULL, sizeof(shellcode_x64_thread_hijacking), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-            WriteProcessMemory(target_process, lp_shellcode, shellcode_x64_thread_hijacking, sizeof(shellcode_x64_thread_hijacking), NULL);
+            BYTE shell_code[sizeof(shellcode_x64_thread_hijacking)];
+            memcpy(shell_code, shellcode_x64_thread_hijacking, sizeof(shellcode_x64_thread_hijacking));
         #else
-            LPVOID lp_shellcode = VirtualAllocEx(target_process, NULL, sizeof(shellcode_x32_thread_hijacking), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-            WriteProcessMemory(target_process, lp_shellcode, shellcode_x32_thread_hijacking, sizeof(shellcode_x32_thread_hijacking), NULL);
+            BYTE shellcode[sizeof(shellcode_x32_thread_hijacking)];
+            memcpy(shellcode, shellcode_x32_thread_hijacking, sizeof(shellcode_x32_thread_hijacking));
         #endif
+
+            HANDLE target_process = Injector::target_process->get_process_handle();
+
+            // Write DLL name to target process' memory
+            std::wstring dll_path_w = String::to_wstring(dll_path);
+            WCHAR dll_path_str[MAX_PATH];
+
+            ZeroMemory(dll_path_str, sizeof(dll_path_str));
+            dll_path_w.copy(dll_path_str, MAX_PATH);
+
+            LPVOID lp_dll_path = VirtualAllocEx(target_process, NULL, sizeof(dll_path_str), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            WriteProcessMemory(target_process, lp_dll_path, dll_path_str, sizeof(dll_path_str), NULL);
 
             SuspendThread(h_thread);
 
@@ -325,11 +343,22 @@ namespace EB
             context.ContextFlags = CONTEXT_FULL;
 
             GetThreadContext(h_thread, &context);
+
+            // Update shellcode addresses
+            // Set dll path
+            *((void**)(shellcode + 9))  = lp_dll_path;
+            // Set loadlibraryw
+            *((void**)(shellcode + 15)) = lp_loadlibraryw;
+            // Set IP
+            *((DWORD*)(shellcode + 28)) = context.Eip;
+
+            LPVOID lp_shellcode = VirtualAllocEx(target_process, NULL, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            WriteProcessMemory(target_process, lp_shellcode, shellcode, sizeof(shellcode), NULL);
             
         #ifdef _WIN64
             context.Rip = (DWORD_PTR)lp_shellcode;
         #else
-            context.Eip = (DWORD_PTR)lp_shellcode;
+            context.Eip = (DWORD)lp_shellcode;
         #endif
             
             SetThreadContext(h_thread, &context);
