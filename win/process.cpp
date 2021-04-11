@@ -272,7 +272,7 @@ namespace EB
             throw std::exception("Not yet implemented.");
         }
 
-        bool Injector::inject_via_setwindowshookex(std::string const& dll_path)
+        bool Injector::inject_via_setwindowshookex(std::string const& dll_path, int hook_type)
         {
             std::wstring dll_path_w = String::to_wstring(dll_path);
 
@@ -286,12 +286,14 @@ namespace EB
             // Couldn't find function
             if(!addr) return false;
 
-            HHOOK hook_handle = SetWindowsHookExW(WH_KEYBOARD, addr, dll, 0);
+            HHOOK hook_handle = SetWindowsHookExW(hook_type, addr, dll, 0);
 
             // Couldn't hook the idHook
             if(!hook_handle) return false;
 
             // UnhookWindowsHookEx(hook_handle);
+
+            return true;
         }
 
         bool Injector::inject_via_thread_hijacking(std::string const& dll_path)
@@ -309,7 +311,7 @@ namespace EB
 
             HANDLE target_process = Injector::target_process->get_process_handle();
 
-        #ifdef __WIN64
+        #ifdef _WIN64
             LPVOID lp_shellcode = VirtualAllocEx(target_process, NULL, sizeof(shellcode_x64_thread_hijacking), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
             WriteProcessMemory(target_process, lp_shellcode, shellcode_x64_thread_hijacking, sizeof(shellcode_x64_thread_hijacking), NULL);
         #else
@@ -324,7 +326,7 @@ namespace EB
 
             GetThreadContext(h_thread, &context);
             
-        #ifdef __WIN64
+        #ifdef _WIN64
             context.Rip = (DWORD_PTR)lp_shellcode;
         #else
             context.Eip = (DWORD_PTR)lp_shellcode;

@@ -104,7 +104,7 @@ namespace EB
             static bool inject_via_ldrloaddll(std::string const& dll_path);
             // Use it for to load a DLL that will inject the DLL that will perform
             // memory manipulation. Do not forget to check exe name
-            static bool inject_via_setwindowshookex(std::string const& dll_path);
+            static bool inject_via_setwindowshookex(std::string const& dll_path, int hook_type=WH_KEYBOARD);
             static bool inject_via_thread_hijacking(std::string const& dll_path);
             static bool inject_dll(InjectionMethod inject_method, std::string const& dll_path);
         };
