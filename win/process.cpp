@@ -110,33 +110,83 @@ namespace EB
             return true;
         }
 
-        bool ExternalProcess::load_thread_list()
+        bool ExternalProcess::load_thread_list(ThreadEnumerationMethod method)
         {
             if(this->process_info == nullptr) return false;
 
-            THREADENTRY32 thread_info;
-            thread_info.dwSize = sizeof(thread_info);
-
-            HANDLE thread_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, NULL);
-
-            if(thread_snapshot == INVALID_HANDLE_VALUE) return false;
-
-            this->thread_list.clear();
-
-            if(Thread32First(thread_snapshot, &thread_info))
+            switch(method)
             {
-                do
+                case ThreadEnumerationMethod::CreateToolhelp32Snapshot:
                 {
-                    if(thread_info.th32OwnerProcessID == *this->get_process_id())
+                    THREADENTRY32 thread_info;
+                    thread_info.dwSize = sizeof(thread_info);
+
+                    HANDLE thread_snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, NULL);
+
+                    if(thread_snapshot == INVALID_HANDLE_VALUE) return false;
+
+                    this->thread_list.clear();
+
+                    if(Thread32First(thread_snapshot, &thread_info))
                     {
-                        ThreadInfo th_info(thread_info.th32ThreadID, thread_info.th32OwnerProcessID, thread_info.tpBasePri);
-                        this->thread_list.push_back(th_info);
+                        do
+                        {
+                            if(thread_info.th32OwnerProcessID == *this->get_process_id())
+                            {
+                                ThreadInfo th_info(thread_info.th32ThreadID, thread_info.th32OwnerProcessID, thread_info.tpBasePri);
+                                this->thread_list.push_back(th_info);
+                            }
+                        } 
+                        while(Thread32Next(thread_snapshot, &thread_info));
                     }
-                } 
-                while(Thread32Next(thread_snapshot, &thread_info));
+
+                    CloseHandle(thread_snapshot);
+                }
+                break;
+
+                case ThreadEnumerationMethod::NtQuerySystemInformation:
+                {
+                    LPVOID lp_ntquerysysteminformation = GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQuerySystemInformation");
+                    
+                    if(!lp_ntquerysysteminformation) return false;
+
+                    SYSTEM_PROCESS_INFORMATION* proc_info = NULL;
+                    BYTE* buffer = NULL;
+                    ULONG buffer_len = 0;
+
+                    NTSTATUS result = ((_NtQuerySystemInformation)(lp_ntquerysysteminformation))(SYSTEMPROCESSINFORMATION,
+                                                                                                 buffer, buffer_len, &buffer_len);
+                    
+                    if(result == (NTSTATUS)0xC0000004) // STATUS_INFO_LENGTH_MISMATCH
+                        buffer = (BYTE*)LocalAlloc(LMEM_FIXED, buffer_len);
+
+                    ((_NtQuerySystemInformation)(lp_ntquerysysteminformation))(SYSTEMPROCESSINFORMATION,
+                                                                               buffer, buffer_len, &buffer_len);
+
+                    unsigned int i = 0;
+
+                    do
+                    {
+                        proc_info = (SYSTEM_PROCESS_INFORMATION*)&buffer[i];
+
+                        if(proc_info->ProcessId == *this->get_process_id())
+                        {
+                            for(int j=0; j < proc_info->ThreadCount; j++)
+                            {
+                                ThreadInfo th_info(proc_info->ThreadInfos[j].Client_Id.UniqueThread, proc_info->ProcessId, proc_info->ThreadInfos[j].BasePriority);
+                                this->thread_list.push_back(th_info);
+                            }
+                        }
+
+                        i += proc_info->NextOffset;
+                    }
+                    while(proc_info->NextOffset != 0 && proc_info != NULL);
+
+                    LocalFree(buffer);
+                }
+                break;
             }
 
-            CloseHandle(thread_snapshot);
             SetLastError(NO_ERROR);
             return true;
         }
