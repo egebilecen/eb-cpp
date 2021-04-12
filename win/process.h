@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <tlhelp32.h>
+#include <strsafe.h>
 
 #include <string>
 #include <vector>
@@ -10,6 +11,8 @@
 
 #include "shellcode.h"
 #include "../string.h"
+
+// TODO: Check if WriteProcessMemory result is true. If it is false, do cleanup.
 
 namespace EB
 {
@@ -125,7 +128,15 @@ namespace EB
                                                      IN  SIZE_T                 SizeOfStackCommit,
                                                      IN  SIZE_T                 SizeOfStackReserve,
                                                      OUT LPVOID                 BytesBuffer);
-        /* End Definations for NtQuerySystemInformation */
+        /* End Definations for NtCreateThreadEx */
+
+        /* Definations for LdrLoadDll */
+        struct LdrLoadDllData
+        {
+            LPVOID         lp_ldrloaddll;
+            UNICODE_STRING dll_path;
+        };
+        /* End Definations for LdrLoadDll */
 
         struct ModuleInfo
         {
@@ -196,7 +207,6 @@ namespace EB
             bool load_module_list();
             bool load_thread_list(ThreadEnumerationMethod method=ThreadEnumerationMethod::CreateToolhelp32Snapshot);
             std::vector<ModuleInfo> const* get_module_list() const;
-            // TODO: Add support for NtQuerySystemInformation() to get thread list.
             std::vector<ThreadInfo> const* get_thread_list() const;
             ModuleInfo const* get_module(std::string const& module_name) const;
         };
@@ -224,14 +234,14 @@ namespace EB
             static ExternalProcess* target_process;
 
             // Private Methods
-            static bool _write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path);
+            static bool _write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path, size_t* wstr_size=nullptr, size_t* buffer_size=nullptr);
             static bool _create_thread(HANDLE const& h_handle, LPVOID const& lp_func, LPVOID const& lp_param, ThreadCreationMethod const& thread_creation_method);
 
             // Public Methods
             static void set_target_process(ExternalProcess* target_process);
-            static bool inject_via_loadlibraryw(std::string const& dll_path, ThreadCreationMethod thread_creation_method=ThreadCreationMethod::CreateRemoteThread);
+            static bool inject_via_loadlibraryw(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method=ThreadCreationMethod::CreateRemoteThread);
             // Not implemented yet
-            static bool inject_via_ldrloaddll(std::string const& dll_path);
+            static bool inject_via_ldrloaddll(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method=ThreadCreationMethod::CreateRemoteThread);
             // Use it for to load a DLL that will inject the DLL that will perform
             // memory manipulation. Do not forget to check exe name
             static bool inject_via_setwindowshookex(std::string const& dll_path, int hook_type=WH_KEYBOARD);

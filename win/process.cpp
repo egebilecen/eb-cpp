@@ -278,13 +278,19 @@ namespace EB
         /* Injector */
         ExternalProcess* Injector::target_process = nullptr;
 
-        bool Injector::_write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path)
+        bool Injector::_write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path, size_t* wstr_size, size_t* buffer_size)
         {
             if(Injector::target_process == nullptr) return false;
 
             WCHAR dll_path_str[MAX_PATH];
             ZeroMemory(dll_path_str, sizeof(dll_path_str));
             dll_path.copy(dll_path_str, MAX_PATH);
+
+            if(buffer_size != nullptr)
+                *buffer_size = sizeof(dll_path_str);
+
+            if(wstr_size != nullptr)
+                StringCbLengthW(dll_path_str, sizeof(dll_path_str), wstr_size);
 
             LPVOID lp_dll_path = VirtualAllocEx(h_handle, NULL, sizeof(dll_path_str), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
             
@@ -338,7 +344,7 @@ namespace EB
             Injector::target_process = target_process;
         }
 
-        bool Injector::inject_via_loadlibraryw(std::string const& dll_path, ThreadCreationMethod thread_creation_method)
+        bool Injector::inject_via_loadlibraryw(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method)
         {
             if(Injector::target_process == nullptr) return false;
 
@@ -368,14 +374,63 @@ namespace EB
                 return false;
             }
 
-            VirtualFreeEx(h_target_process, lp_dll_path, 0, MEM_RELEASE);
+            //VirtualFreeEx(h_target_process, lp_dll_path, 0, MEM_RELEASE);
             CloseHandle(h_target_process);
             return true;
         }
 
-        bool Injector::inject_via_ldrloaddll(std::string const& dll_path)
+        bool Injector::inject_via_ldrloaddll(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method)
         {
             throw std::exception("Not yet implemented.");
+
+            if(Injector::target_process == nullptr) return false;
+
+            LPVOID lp_ldrloaddll = GetProcAddress(GetModuleHandle(L"ntdll.dll"), "LdrLoadDll");
+
+            // GetProcAddress failed
+            if(!lp_ldrloaddll) return false;
+
+            HANDLE h_target_process = Injector::target_process->get_process_handle();
+
+            if(!h_target_process) return false;
+
+            // Write DLL name to target process' memory
+            LPVOID lp_dll_path = NULL;
+            size_t wstr_size   = 0;
+            size_t buffer_size = 0;
+
+            if(!Injector::_write_dll_path(h_target_process, String::to_wstring(dll_path), lp_dll_path, &wstr_size, &buffer_size))
+            {
+                CloseHandle(h_target_process);
+                return false;
+            }
+
+            LdrLoadDllData shellcode_data;
+            shellcode_data.lp_ldrloaddll          = lp_ldrloaddll;
+            shellcode_data.dll_path.Buffer        = (WCHAR*)lp_dll_path;
+            shellcode_data.dll_path.Length        = (USHORT)wstr_size;
+            shellcode_data.dll_path.MaximumLength = (USHORT)buffer_size;
+
+            BYTE shellcode[sizeof(shellcode_x32_ldrloaddll)];
+            memcpy(shellcode, shellcode_x32_ldrloaddll, sizeof(shellcode_x32_ldrloaddll));
+
+            // Set dll path
+            *((void**)(shellcode + 0))  = lp_dll_path;
+            // Set loadlibraryw
+            *((void**)(shellcode + 0)) = lp_ldrloaddll;
+
+            LPVOID lp_shellcode = VirtualAllocEx(h_target_process, NULL, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            WriteProcessMemory(h_target_process, lp_shellcode, shellcode, sizeof(shellcode), NULL);
+
+            if(!Injector::_create_thread(h_target_process, lp_shellcode, lp_dll_path, thread_creation_method))
+            {
+                VirtualFreeEx(h_target_process, lp_dll_path,  0, MEM_RELEASE);
+                VirtualFreeEx(h_target_process, lp_shellcode, 0, MEM_RELEASE);
+                CloseHandle(h_target_process);
+                return false;
+            }
+
+            return true;
         }
 
         bool Injector::inject_via_setwindowshookex(std::string const& dll_path, int hook_type)
@@ -446,12 +501,21 @@ namespace EB
             GetThreadContext(h_thread, &context);
 
             // Update shellcode addresses
+        #ifdef _WIN64
+            // Set dll path
+            *((void**)(shellcode + 0)) = lp_dll_path;
+            // Set loadlibraryw
+            *((void**)(shellcode + 0)) = lp_loadlibraryw;
+            // Set IP
+            *((DWORD*)(shellcode + 0)) = context.Rip;
+        #else
             // Set dll path
             *((void**)(shellcode + 9))  = lp_dll_path;
             // Set loadlibraryw
             *((void**)(shellcode + 15)) = lp_loadlibraryw;
             // Set IP
             *((DWORD*)(shellcode + 28)) = context.Eip;
+        #endif
 
             LPVOID lp_shellcode = VirtualAllocEx(h_target_process, NULL, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
             WriteProcessMemory(h_target_process, lp_shellcode, shellcode, sizeof(shellcode), NULL);
