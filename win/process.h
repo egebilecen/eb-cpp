@@ -5,6 +5,8 @@
 
 #include <string>
 #include <vector>
+#include <thread>
+#include <chrono>
 
 #include "shellcode.h"
 #include "../string.h"
@@ -108,7 +110,21 @@ namespace EB
         } SYSTEM_PROCESS_INFORMATION;
 
         #define SYSTEMPROCESSINFORMATION 5
-        #define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS) 0xC0000004)
+        #define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004)
+        /* End Definations for NtQuerySystemInformation */
+
+        /* Definations for NtCreateThreadEx */
+        typedef NTSTATUS (WINAPI* _NtCreateThreadEx)(OUT PHANDLE                ThreadHandle,
+                                                     IN  ACCESS_MASK            DesiredAccess,
+                                                     IN  LPVOID                 ObjectAttributes,
+                                                     IN  HANDLE                 ProcessHandle,
+                                                     IN  LPTHREAD_START_ROUTINE ThreadProcedure,
+                                                     IN  LPVOID                 ParameterData,
+                                                     IN  BOOL                   CreateSuspended,
+                                                     IN  SIZE_T                 StackZeroBits,
+                                                     IN  SIZE_T                 SizeOfStackCommit,
+                                                     IN  SIZE_T                 SizeOfStackReserve,
+                                                     OUT LPVOID                 BytesBuffer);
         /* End Definations for NtQuerySystemInformation */
 
         struct ModuleInfo
@@ -144,6 +160,12 @@ namespace EB
         {
             CreateToolhelp32Snapshot,
             NtQuerySystemInformation
+        };
+
+        enum class ThreadCreationMethod
+        {
+            CreateRemoteThread,
+            NtCreateThreadEx
         };
 
         class ExternalProcess
@@ -201,14 +223,19 @@ namespace EB
 
             static ExternalProcess* target_process;
 
+            // Private Methods
+            static bool _write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path);
+            static bool _create_thread(HANDLE const& h_handle, LPVOID const& lp_func, LPVOID const& lp_param, ThreadCreationMethod const& thread_creation_method);
+
+            // Public Methods
             static void set_target_process(ExternalProcess* target_process);
-            static bool inject_via_loadlibraryw(std::string const& dll_path);
+            static bool inject_via_loadlibraryw(std::string const& dll_path, ThreadCreationMethod thread_creation_method=ThreadCreationMethod::CreateRemoteThread);
             // Not implemented yet
             static bool inject_via_ldrloaddll(std::string const& dll_path);
             // Use it for to load a DLL that will inject the DLL that will perform
             // memory manipulation. Do not forget to check exe name
             static bool inject_via_setwindowshookex(std::string const& dll_path, int hook_type=WH_KEYBOARD);
-            static bool inject_via_thread_hijacking(std::string const& dll_path);
+            static bool inject_via_thread_hijacking(std::string const& dll_path, unsigned int cleanup_delay_ms=0);
             static bool inject_dll(InjectionMethod inject_method, std::string const& dll_path);
         };
     }
