@@ -278,7 +278,7 @@ namespace EB
         /* Injector */
         ExternalProcess* Injector::target_process = nullptr;
 
-        bool Injector::_write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path, size_t* wstr_size, size_t* buffer_size)
+        bool Injector::_write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path, size_t* wstr_size_out, size_t* buffer_size_out)
         {
             if(Injector::target_process == nullptr) return false;
 
@@ -286,11 +286,11 @@ namespace EB
             ZeroMemory(dll_path_str, sizeof(dll_path_str));
             dll_path.copy(dll_path_str, MAX_PATH);
 
-            if(buffer_size != nullptr)
-                *buffer_size = sizeof(dll_path_str);
+            if(buffer_size_out != nullptr)
+                *buffer_size_out = sizeof(dll_path_str);
 
-            if(wstr_size != nullptr)
-                StringCbLengthW(dll_path_str, sizeof(dll_path_str), wstr_size);
+            if(wstr_size_out != nullptr)
+                StringCbLengthW(dll_path_str, sizeof(dll_path_str), wstr_size_out);
 
             LPVOID lp_dll_path = VirtualAllocEx(h_handle, NULL, sizeof(dll_path_str), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
             
@@ -303,7 +303,7 @@ namespace EB
             return true;
         }
 
-        bool Injector::_create_thread(HANDLE const& h_handle, LPVOID const& lp_func, LPVOID const& lp_param, ThreadCreationMethod const& thread_creation_method)
+        bool Injector::_create_thread(HANDLE const& h_handle, LPVOID const& lp_func, LPVOID const& lp_param, ThreadCreationMethod const& thread_creation_method, HANDLE* h_thread_out)
         {
             if(Injector::target_process == nullptr) return false;
 
@@ -316,6 +316,7 @@ namespace EB
                                                          NULL, NULL);
 
                     if(!h_thread) return false;
+                    if(h_thread_out != nullptr) *h_thread_out = h_thread;
                 }
                 break;
 
@@ -332,6 +333,7 @@ namespace EB
                                                                lp_param, FALSE, NULL, NULL, NULL, NULL);
 
                     if(!h_thread) return false;
+                    if(h_thread_out != nullptr) *h_thread_out = h_thread;
                 }
                 break;
             }
@@ -367,21 +369,35 @@ namespace EB
             }
 
             // Create thread to execute LoadLibraryW function
-            if(!Injector::_create_thread(h_target_process, lp_loadlibraryw, lp_dll_path, thread_creation_method))
+            HANDLE h_thread = NULL;
+
+            if(!Injector::_create_thread(h_target_process, lp_loadlibraryw, lp_dll_path, thread_creation_method, &h_thread))
             {
                 VirtualFreeEx(h_target_process, lp_dll_path, 0, MEM_RELEASE);
                 CloseHandle(h_target_process);
                 return false;
             }
 
-            //VirtualFreeEx(h_target_process, lp_dll_path, 0, MEM_RELEASE);
+            DWORD thread_exit_code;
+
+            do
+            {
+                GetExitCodeThread(h_thread, &thread_exit_code);
+            }
+            while(thread_exit_code == STILL_ACTIVE);
+
+            VirtualFreeEx(h_target_process, lp_dll_path,     0, MEM_RELEASE);
+            VirtualFreeEx(h_target_process, lp_loadlibraryw, 0, MEM_RELEASE);
+
             CloseHandle(h_target_process);
+            CloseHandle(h_thread);
+
             return true;
         }
 
         bool Injector::inject_via_ldrloaddll(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method)
         {
-            throw std::exception("Not yet implemented.");
+            //throw std::exception("Not yet implemented.");
 
             if(Injector::target_process == nullptr) return false;
 
@@ -405,30 +421,58 @@ namespace EB
                 return false;
             }
 
-            LdrLoadDllData shellcode_data;
-            shellcode_data.lp_ldrloaddll          = lp_ldrloaddll;
-            shellcode_data.dll_path.Buffer        = (WCHAR*)lp_dll_path;
-            shellcode_data.dll_path.Length        = (USHORT)wstr_size;
-            shellcode_data.dll_path.MaximumLength = (USHORT)buffer_size;
+            UNICODE_STRING dll_path_unicode;
+            dll_path_unicode.Buffer        = (WCHAR*)lp_dll_path;
+            dll_path_unicode.Length        = wstr_size;
+            dll_path_unicode.MaximumLength = buffer_size;
+
+            LPVOID lp_unicode_str = VirtualAllocEx(h_target_process, NULL, sizeof(dll_path_unicode), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            WriteProcessMemory(h_target_process, lp_unicode_str, &dll_path_unicode, sizeof(dll_path_unicode), NULL);
+
+            HANDLE h_out = NULL;
+            LPVOID lp_handle_out = VirtualAllocEx(h_target_process, NULL, sizeof(h_out), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+            WriteProcessMemory(h_target_process, lp_handle_out, &h_out, sizeof(h_out), NULL);
 
             BYTE shellcode[sizeof(shellcode_x32_ldrloaddll)];
             memcpy(shellcode, shellcode_x32_ldrloaddll, sizeof(shellcode_x32_ldrloaddll));
 
-            // Set dll path
-            *((void**)(shellcode + 0))  = lp_dll_path;
-            // Set loadlibraryw
-            *((void**)(shellcode + 0)) = lp_ldrloaddll;
+            *((void**)(shellcode + 4))  = lp_handle_out;
+            *((void**)(shellcode + 9))  = lp_unicode_str;
+            *((void**)(shellcode + 18)) = lp_ldrloaddll;
 
             LPVOID lp_shellcode = VirtualAllocEx(h_target_process, NULL, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
             WriteProcessMemory(h_target_process, lp_shellcode, shellcode, sizeof(shellcode), NULL);
 
-            if(!Injector::_create_thread(h_target_process, lp_shellcode, lp_dll_path, thread_creation_method))
+            HANDLE h_thread = NULL;
+
+            if(!Injector::_create_thread(h_target_process, lp_shellcode, lp_dll_path, thread_creation_method, &h_thread))
             {
-                VirtualFreeEx(h_target_process, lp_dll_path,  0, MEM_RELEASE);
-                VirtualFreeEx(h_target_process, lp_shellcode, 0, MEM_RELEASE);
+                VirtualFreeEx(h_target_process, lp_dll_path,    0, MEM_RELEASE);
+                VirtualFreeEx(h_target_process, lp_handle_out,  0, MEM_RELEASE);
+                VirtualFreeEx(h_target_process, lp_unicode_str, 0, MEM_RELEASE);
+                VirtualFreeEx(h_target_process, lp_shellcode,   0, MEM_RELEASE);
+
                 CloseHandle(h_target_process);
+
                 return false;
             }
+
+            DWORD thread_exit_code;
+            
+            do
+            {
+                GetExitCodeThread(h_thread, &thread_exit_code);
+            }
+            while(thread_exit_code == STILL_ACTIVE);
+
+            // Cleanup
+            VirtualFreeEx(h_target_process, lp_dll_path,    0, MEM_RELEASE);
+            VirtualFreeEx(h_target_process, lp_handle_out,  0, MEM_RELEASE);
+            VirtualFreeEx(h_target_process, lp_unicode_str, 0, MEM_RELEASE);
+            VirtualFreeEx(h_target_process, lp_shellcode,   0, MEM_RELEASE);
+
+            CloseHandle(h_target_process);
+            CloseHandle(h_thread);
 
             return true;
         }

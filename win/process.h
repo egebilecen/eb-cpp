@@ -130,14 +130,6 @@ namespace EB
                                                      OUT LPVOID                 BytesBuffer);
         /* End Definations for NtCreateThreadEx */
 
-        /* Definations for LdrLoadDll */
-        struct LdrLoadDllData
-        {
-            LPVOID         lp_ldrloaddll;
-            UNICODE_STRING dll_path;
-        };
-        /* End Definations for LdrLoadDll */
-
         struct ModuleInfo
         {
             std::wstring module_path;      // szExePath
@@ -234,8 +226,8 @@ namespace EB
             static ExternalProcess* target_process;
 
             // Private Methods
-            static bool _write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path, size_t* wstr_size=nullptr, size_t* buffer_size=nullptr);
-            static bool _create_thread(HANDLE const& h_handle, LPVOID const& lp_func, LPVOID const& lp_param, ThreadCreationMethod const& thread_creation_method);
+            static bool _write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path, size_t* wstr_size_out=nullptr, size_t* buffer_size_out=nullptr);
+            static bool _create_thread(HANDLE const& h_handle, LPVOID const& lp_func, LPVOID const& lp_param, ThreadCreationMethod const& thread_creation_method, HANDLE* h_thread_out=nullptr);
 
             // Public Methods
             static void set_target_process(ExternalProcess* target_process);
