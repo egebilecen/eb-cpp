@@ -431,7 +431,7 @@ namespace EB
 
             *((void**)(shellcode + 4))  = lp_handle_out;
             *((void**)(shellcode + 9))  = lp_unicode_str;
-            *((void**)(shellcode + 24)) = lp_ldrloaddll;
+            *((void**)(shellcode + 18)) = lp_ldrloaddll;
 
             LPVOID lp_shellcode = VirtualAllocEx(h_target_process, NULL, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
             WriteProcessMemory(h_target_process, lp_shellcode, shellcode, sizeof(shellcode), NULL);
