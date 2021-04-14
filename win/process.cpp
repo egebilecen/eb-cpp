@@ -352,14 +352,12 @@ namespace EB
 
             LPVOID lp_loadlibraryw = GetProcAddress(GetModuleHandle(L"kernel32.dll"), "LoadLibraryW");
 
-            // GetProcAddress failed
             if(!lp_loadlibraryw) return false;
 
             HANDLE h_target_process = Injector::target_process->get_process_handle();
 
             if(!h_target_process) return false;
 
-            // Allocate dll_path string in target process' memory
             LPVOID lp_dll_path = NULL;
 
             if(!Injector::_write_dll_path(h_target_process, String::to_wstring(dll_path), lp_dll_path))
@@ -368,7 +366,6 @@ namespace EB
                 return false;
             }
 
-            // Create thread to execute LoadLibraryW function
             HANDLE h_thread = NULL;
 
             if(!Injector::_create_thread(h_target_process, lp_loadlibraryw, lp_dll_path, thread_creation_method, &h_thread))
@@ -397,20 +394,16 @@ namespace EB
 
         bool Injector::inject_via_ldrloaddll(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method)
         {
-            //throw std::exception("Not yet implemented.");
-
             if(Injector::target_process == nullptr) return false;
 
             LPVOID lp_ldrloaddll = GetProcAddress(GetModuleHandle(L"ntdll.dll"), "LdrLoadDll");
 
-            // GetProcAddress failed
             if(!lp_ldrloaddll) return false;
 
             HANDLE h_target_process = Injector::target_process->get_process_handle();
 
             if(!h_target_process) return false;
 
-            // Write DLL name to target process' memory
             LPVOID lp_dll_path = NULL;
             size_t wstr_size   = 0;
             size_t buffer_size = 0;
@@ -438,7 +431,7 @@ namespace EB
 
             *((void**)(shellcode + 4))  = lp_handle_out;
             *((void**)(shellcode + 9))  = lp_unicode_str;
-            *((void**)(shellcode + 18)) = lp_ldrloaddll;
+            *((void**)(shellcode + 24)) = lp_ldrloaddll;
 
             LPVOID lp_shellcode = VirtualAllocEx(h_target_process, NULL, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
             WriteProcessMemory(h_target_process, lp_shellcode, shellcode, sizeof(shellcode), NULL);
@@ -483,17 +476,14 @@ namespace EB
 
             HMODULE dll = LoadLibraryW(dll_path_w.c_str());
 
-            // Couldn't find DLL
             if(!dll) return false;
 
             HOOKPROC addr = (HOOKPROC)GetProcAddress(dll, "HookMain");
 
-            // Couldn't find function
             if(!addr) return false;
 
             HHOOK hook_handle = SetWindowsHookExW(hook_type, addr, dll, 0);
 
-            // Couldn't hook the idHook
             if(!hook_handle) return false;
 
             // UnhookWindowsHookEx(hook_handle);
