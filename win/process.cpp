@@ -5,7 +5,7 @@ namespace EB
     namespace Process
     {
         // Private Method(s)
-        void ExternalProcess::get_process_info(DWORD const* process_id, std::string const* process_name)
+        void ExternalProcess::get_process_info(DWORD const* process_id, std::wstring const* process_name)
         {
             if(process_id   == nullptr
             && process_name == nullptr) return;
@@ -31,9 +31,7 @@ namespace EB
                     }
                     else if(process_name != nullptr)
                     {
-                        std::wstring process_name_w = String::to_wstring(*process_name);
-
-                        if(!process_name_w.compare(process_info->szExeFile))
+                        if(!process_name->compare(process_info->szExeFile))
                         {
                             this->process_info = process_info;
                             goto loop_end;
@@ -49,7 +47,7 @@ namespace EB
         }
 
         // Constructor(s)
-        ExternalProcess::ExternalProcess(std::string const& process_name)
+        ExternalProcess::ExternalProcess(std::wstring const& process_name)
         {
             this->get_process_info(nullptr, &process_name);
         }
@@ -206,11 +204,11 @@ namespace EB
             return OpenProcess(PROCESS_ALL_ACCESS, FALSE, *this->get_process_id());
         }
 
-        ModuleInfo const* ExternalProcess::get_module(std::string const& module_name) const
+        ModuleInfo const* ExternalProcess::get_module(std::wstring const& module_name) const
         {
             for(size_t i=0; i < this->module_list.size(); i++)
             {
-                if(this->module_list[i].module_name == String::to_wstring(module_name))
+                if(this->module_list[i].module_name == module_name)
                     return &this->module_list[i];
             }
 
@@ -346,7 +344,7 @@ namespace EB
             Injector::target_process = target_process;
         }
 
-        bool Injector::inject_via_loadlibraryw(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method)
+        bool Injector::inject_via_loadlibraryw(std::wstring const& dll_path, ThreadCreationMethod const& thread_creation_method)
         {
             if(Injector::target_process == nullptr) return false;
 
@@ -360,7 +358,7 @@ namespace EB
 
             LPVOID lp_dll_path = NULL;
 
-            if(!Injector::_write_dll_path(h_target_process, String::to_wstring(dll_path), lp_dll_path))
+            if(!Injector::_write_dll_path(h_target_process, dll_path, lp_dll_path))
             {
                 CloseHandle(h_target_process);
                 return false;
@@ -392,7 +390,7 @@ namespace EB
             return true;
         }
 
-        bool Injector::inject_via_ldrloaddll(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method)
+        bool Injector::inject_via_ldrloaddll(std::wstring const& dll_path, ThreadCreationMethod const& thread_creation_method)
         {
             if(Injector::target_process == nullptr) return false;
 
@@ -408,7 +406,7 @@ namespace EB
             size_t wstr_size   = 0;
             size_t buffer_size = 0;
 
-            if(!Injector::_write_dll_path(h_target_process, String::to_wstring(dll_path), lp_dll_path, &wstr_size, &buffer_size))
+            if(!Injector::_write_dll_path(h_target_process, dll_path, lp_dll_path, &wstr_size, &buffer_size))
             {
                 CloseHandle(h_target_process);
                 return false;
@@ -470,11 +468,9 @@ namespace EB
             return true;
         }
 
-        bool Injector::inject_via_setwindowshookex(std::string const& dll_path, int hook_type)
+        bool Injector::inject_via_setwindowshookex(std::wstring const& dll_path, int hook_type)
         {
-            std::wstring dll_path_w = String::to_wstring(dll_path);
-
-            HMODULE dll = LoadLibraryW(dll_path_w.c_str());
+            HMODULE dll = LoadLibraryW(dll_path.c_str());
 
             if(!dll) return false;
 
@@ -491,7 +487,7 @@ namespace EB
             return true;
         }
 
-        bool Injector::inject_via_thread_hijacking(std::string const& dll_path, unsigned int cleanup_delay_ms)
+        bool Injector::inject_via_thread_hijacking(std::wstring const& dll_path, unsigned int cleanup_delay_ms)
         {
             if(Injector::target_process == nullptr) return false;
 
@@ -521,7 +517,7 @@ namespace EB
             // Write DLL name to target process' memory
             LPVOID lp_dll_path = NULL;
 
-            if(!Injector::_write_dll_path(h_target_process, String::to_wstring(dll_path), lp_dll_path))
+            if(!Injector::_write_dll_path(h_target_process, dll_path, lp_dll_path))
             {
                 CloseHandle(h_target_process);
                 return false;
@@ -575,7 +571,7 @@ namespace EB
             return true;
         }
 
-        bool Injector::inject_dll(InjectionMethod inject_method, std::string const& dll_path)
+        bool Injector::inject_dll(InjectionMethod inject_method, std::wstring const& dll_path)
         {
             if(Injector::target_process == nullptr) return false;
 

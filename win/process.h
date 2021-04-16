@@ -181,11 +181,11 @@ namespace EB
             std::vector<ThreadInfo> thread_list;
 
             // Method(s)
-            void get_process_info(DWORD const* process_id, std::string const* process_name);
+            void get_process_info(DWORD const* process_id, std::wstring const* process_name);
 
         public:
             // Constructor(s)
-            ExternalProcess(std::string const& process_name);
+            ExternalProcess(std::wstring const& process_name);
             ExternalProcess(DWORD const& process_id);
 
             // Destructor
@@ -200,7 +200,7 @@ namespace EB
             bool load_thread_list(ThreadEnumerationMethod method=ThreadEnumerationMethod::CreateToolhelp32Snapshot);
             std::vector<ModuleInfo> const* get_module_list() const;
             std::vector<ThreadInfo> const* get_thread_list() const;
-            ModuleInfo const* get_module(std::string const& module_name) const;
+            ModuleInfo const* get_module(std::wstring const& module_name) const;
         };
 
         namespace InternalProcess
@@ -209,7 +209,7 @@ namespace EB
             HANDLE get_process_handle();
             HMODULE get_module_handle();
             std::vector<ModuleInfo> get_module_list();
-            ModuleInfo const* get_module(std::vector<ModuleInfo> const* module_list, std::string const& module_name);
+            ModuleInfo const* get_module(std::vector<ModuleInfo> const* module_list, std::wstring const& module_name);
         }
 
         static class Injector
@@ -231,14 +231,14 @@ namespace EB
 
             // Public Methods
             static void set_target_process(ExternalProcess* target_process);
-            static bool inject_via_loadlibraryw(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method=ThreadCreationMethod::CreateRemoteThread);
+            static bool inject_via_loadlibraryw(std::wstring const& dll_path, ThreadCreationMethod const& thread_creation_method=ThreadCreationMethod::CreateRemoteThread);
             // Not implemented yet
-            static bool inject_via_ldrloaddll(std::string const& dll_path, ThreadCreationMethod const& thread_creation_method=ThreadCreationMethod::CreateRemoteThread);
+            static bool inject_via_ldrloaddll(std::wstring const& dll_path, ThreadCreationMethod const& thread_creation_method=ThreadCreationMethod::CreateRemoteThread);
             // Use it for to load a DLL that will inject the DLL that will perform
             // memory manipulation. Do not forget to check exe name
-            static bool inject_via_setwindowshookex(std::string const& dll_path, int hook_type=WH_KEYBOARD);
-            static bool inject_via_thread_hijacking(std::string const& dll_path, unsigned int cleanup_delay_ms=0);
-            static bool inject_dll(InjectionMethod inject_method, std::string const& dll_path);
+            static bool inject_via_setwindowshookex(std::wstring const& dll_path, int hook_type=WH_KEYBOARD);
+            static bool inject_via_thread_hijacking(std::wstring const& dll_path, unsigned int cleanup_delay_ms=0);
+            static bool inject_dll(InjectionMethod inject_method, std::wstring const& dll_path);
         };
     }
 }
