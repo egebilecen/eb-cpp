@@ -10,7 +10,6 @@
 #include <chrono>
 
 #include "shellcode.h"
-#include "../string.h"
 
 // TODO: Check if WriteProcessMemory result is true. If it is false, do cleanup.
 

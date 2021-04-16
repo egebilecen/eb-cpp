@@ -261,11 +261,11 @@ namespace EB
                 return mod_list;
             }
 
-            ModuleInfo const* get_module(std::vector<ModuleInfo> const* module_list, std::string const& module_name)
+            ModuleInfo const* get_module(std::vector<ModuleInfo> const* module_list, std::wstring const& module_name)
             {
                 for(size_t i=0; i < module_list->size(); i++)
                 {
-                    if((*module_list)[i].module_name == String::to_wstring(module_name))
+                    if((*module_list)[i].module_name == module_name)
                         return &(*module_list)[i];
                 }
 
