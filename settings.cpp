@@ -18,15 +18,18 @@ namespace EB
         return settings_str;
     }
 
-    int Settings::get_setting_index_by_key(std::string key)
+    int Settings::get_setting_index_by_key(std::string const& key, bool search_in_default_settings)
     {
-        for(int i=0; i < this->settings.size(); i++)
-            if(this->settings[i].first == key) return i;
+        EB::Settings::SettingList& setting_list = 
+            search_in_default_settings ? this->default_settings : this->settings;
+
+        for(int i=0; i < setting_list.size(); i++)
+            if(setting_list[i].first == key) return i;
 
         return -1;
     }
 
-    int Settings::get_setting_index_by_value(std::string value, int nth)
+    int Settings::get_setting_index_by_value(std::string const& value, int nth)
     {
         int found = 0;
 
@@ -79,7 +82,7 @@ namespace EB
             std::string key      = temp_str.substr(0, delimiter_pos);
             std::string value    = temp_str.substr(delimiter_pos + 1, temp_str.length());
 
-            this->settings.push_back(SettingPair(key, value));
+            this->settings.emplace_back(key, value);
         }
 
         file.close();
@@ -126,9 +129,26 @@ namespace EB
         this->settings = settings;
     }
 
+    bool Settings::is_setting_exist(std::string const& key)
+    {
+        return this->get_setting_index_by_key(key) < 0 ? false : true;
+    }
+
     //------- Setter Function Definations
     void Settings::set_default_settings(SettingList& settings)
     {
         this->default_settings = settings;
+    }
+
+    //------- Getter Function Definations
+    std::vector<std::string> Settings::get_setting_keys()
+    {
+        std::vector<std::string> key_list;
+        key_list.reserve(this->settings.size());
+
+        for(size_t i=0; i < this->settings.size(); i++)
+            key_list.push_back(this->settings[i].first);
+
+        return key_list;
     }
 }
