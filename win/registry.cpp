@@ -35,7 +35,7 @@ namespace EB
                     return L"";
                 }
 
-                std::wstring value(data_size / sizeof(data_size), L'\0');
+                std::wstring value(data_size / sizeof(wchar_t), L'\0');
 
                 if(RegQueryValueExW(hkey, name.c_str(), NULL, NULL, reinterpret_cast<LPBYTE>(&value[0]), &data_size) != ERROR_SUCCESS)
                 {
@@ -48,7 +48,8 @@ namespace EB
                 RegCloseKey(hkey);
 
                 size_t first_null = value.find_first_of(L'\0');
-                if(first_null != std::wstring::npos) value.resize(first_null);
+                if(first_null != std::wstring::npos) 
+                    value.resize(first_null);
 
                 _last_error_code = ErrorCode::NONE;
                 return value;
