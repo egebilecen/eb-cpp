@@ -336,6 +336,7 @@ namespace EB
                 break;
 
                 case ThreadCreationMethod::RtlCreateUserThread:
+                {
                     LPVOID lp_rtlcreateuserthread = GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlCreateUserThread");
 
                     if(!lp_rtlcreateuserthread) return false;
@@ -348,6 +349,7 @@ namespace EB
 
                     if(!h_thread) return false;
                     if(h_thread_out != nullptr) *h_thread_out = h_thread;
+                }
                 break;
             }
 
