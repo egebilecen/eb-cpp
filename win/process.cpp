@@ -320,7 +320,7 @@ namespace EB
 
                 case ThreadCreationMethod::NtCreateThreadEx:
                 {
-                    LPVOID lp_ntcreatethreadex = GetProcAddress(GetModuleHandle(L"ntdll.dll"), "NtCreateThreadEx");
+                    LPVOID lp_ntcreatethreadex = GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "NtCreateThreadEx");
 
                     if(!lp_ntcreatethreadex) return false;
 
@@ -333,6 +333,21 @@ namespace EB
                     if(!h_thread) return false;
                     if(h_thread_out != nullptr) *h_thread_out = h_thread;
                 }
+                break;
+
+                case ThreadCreationMethod::RtlCreateUserThread:
+                    LPVOID lp_rtlcreateuserthread = GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlCreateUserThread");
+
+                    if(!lp_rtlcreateuserthread) return false;
+
+                    HANDLE h_thread = NULL;
+
+                    ((_RtlCreateUserThread)(lp_rtlcreateuserthread))(h_handle, 
+                                                                     NULL, FALSE, NULL, NULL, NULL, 
+                                                                     lp_func, lp_param, &h_thread, NULL);
+
+                    if(!h_thread) return false;
+                    if(h_thread_out != nullptr) *h_thread_out = h_thread;
                 break;
             }
 

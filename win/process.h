@@ -11,8 +11,6 @@
 
 #include "shellcode.h"
 
-// TODO: Check if WriteProcessMemory result is true. If it is false, do cleanup.
-
 namespace EB
 {
     namespace Process
@@ -116,18 +114,31 @@ namespace EB
         /* End Definations for NtQuerySystemInformation */
 
         /* Definations for NtCreateThreadEx */
-        typedef NTSTATUS (WINAPI* _NtCreateThreadEx)(OUT PHANDLE                ThreadHandle,
-                                                     IN  ACCESS_MASK            DesiredAccess,
-                                                     IN  LPVOID                 ObjectAttributes,
-                                                     IN  HANDLE                 ProcessHandle,
-                                                     IN  LPTHREAD_START_ROUTINE ThreadProcedure,
-                                                     IN  LPVOID                 ParameterData,
-                                                     IN  BOOL                   CreateSuspended,
-                                                     IN  SIZE_T                 StackZeroBits,
-                                                     IN  SIZE_T                 SizeOfStackCommit,
-                                                     IN  SIZE_T                 SizeOfStackReserve,
-                                                     OUT LPVOID                 BytesBuffer);
+        typedef NTSTATUS (NTAPI* _NtCreateThreadEx)(OUT PHANDLE                ThreadHandle,
+                                                    IN  ACCESS_MASK            DesiredAccess,
+                                                    IN  LPVOID                 ObjectAttributes,
+                                                    IN  HANDLE                 ProcessHandle,
+                                                    IN  LPTHREAD_START_ROUTINE ThreadProcedure,
+                                                    IN  LPVOID                 ParameterData,
+                                                    IN  BOOL                   CreateSuspended,
+                                                    IN  SIZE_T                 StackZeroBits,
+                                                    IN  SIZE_T                 SizeOfStackCommit,
+                                                    IN  SIZE_T                 SizeOfStackReserve,
+                                                    OUT LPVOID                 BytesBuffer);
         /* End Definations for NtCreateThreadEx */
+
+        /* Definations for RtlCreateUserThread */
+        typedef NTSTATUS(NTAPI* _RtlCreateUserThread)(IN HANDLE               ProcessHandle,
+                                                      IN PSECURITY_DESCRIPTOR SecurityDescriptor OPTIONAL,
+                                                      IN BOOLEAN              CreateSuspended,
+                                                      IN ULONG                StackZeroBits,
+                                                      IN OUT PULONG           StackReserved,
+                                                      IN OUT PULONG           StackCommit,
+                                                      IN PVOID                StartAddress,
+                                                      IN PVOID                StartParameter OPTIONAL,
+                                                      OUT PHANDLE             ThreadHandle,
+                                                      OUT CLIENT_ID*          ClientID);
+        /* End Definations for RtlCreateUserThread */
 
         struct ModuleInfo
         {
@@ -167,7 +178,8 @@ namespace EB
         enum class ThreadCreationMethod
         {
             CreateRemoteThread,
-            NtCreateThreadEx
+            NtCreateThreadEx,
+            RtlCreateUserThread
         };
 
         class ExternalProcess
