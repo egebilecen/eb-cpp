@@ -525,13 +525,13 @@ namespace EB
 
                 if(!lp_loadlibraryw) return false;
 
-                #ifdef _WIN64
-                BYTE shell_code[sizeof(shellcode_x64_thread_hijacking)];
-                memcpy(shell_code, shellcode_x64_thread_hijacking, sizeof(shellcode_x64_thread_hijacking));
-                #else
-                BYTE shellcode[sizeof(shellcode_x32_thread_hijacking)];
-                memcpy(shellcode, shellcode_x32_thread_hijacking, sizeof(shellcode_x32_thread_hijacking));
-                #endif
+            #ifdef _WIN64
+                BYTE shell_code64[sizeof(shellcode_x64_thread_hijacking)];
+                memcpy(shell_code64, shellcode_x64_thread_hijacking, sizeof(shellcode_x64_thread_hijacking));
+            #else
+                BYTE shellcode32[sizeof(shellcode_x32_thread_hijacking)];
+                memcpy(shellcode32, shellcode_x32_thread_hijacking, sizeof(shellcode_x32_thread_hijacking));
+            #endif
 
                 HANDLE h_target_process = Injector::target_process->get_process_handle();
 
@@ -552,30 +552,31 @@ namespace EB
                 GetThreadContext(h_thread, &context);
 
                 // Update shellcode addresses
-                #ifdef _WIN64
+            #ifdef _WIN64
                 // Set dll path
-                *((void**)(shellcode + 0)) = lp_dll_path;
+                *((void**)(shell_code64 + 0)) = lp_dll_path;
                 // Set loadlibraryw
-                *((void**)(shellcode + 0)) = lp_loadlibraryw;
+                *((void**)(shell_code64 + 0)) = lp_loadlibraryw;
                 // Set IP
-                *((DWORD*)(shellcode + 0)) = context.Rip;
-                #else
-                // Set dll path
-                *((void**)(shellcode + 9))  = lp_dll_path;
-                // Set loadlibraryw
-                *((void**)(shellcode + 15)) = lp_loadlibraryw;
-                // Set IP
-                *((DWORD*)(shellcode + 28)) = context.Eip;
-                #endif
+                *((DWORD*)(shell_code64 + 0)) = context.Rip;
 
-                LPVOID lp_shellcode = VirtualAllocEx(h_target_process, NULL, sizeof(shellcode), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-                WriteProcessMemory(h_target_process, lp_shellcode, shellcode, sizeof(shellcode), NULL);
+                LPVOID lp_shellcode = VirtualAllocEx(h_target_process, NULL, sizeof(shell_code64), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+                WriteProcessMemory(h_target_process, lp_shellcode, shell_code64, sizeof(shell_code64), NULL);
 
-                #ifdef _WIN64
                 context.Rip = (DWORD_PTR)lp_shellcode;
-                #else
+            #else
+                // Set dll path
+                *((void**)(shellcode32 + 9))  = lp_dll_path;
+                // Set loadlibraryw
+                *((void**)(shellcode32 + 15)) = lp_loadlibraryw;
+                // Set IP
+                *((DWORD*)(shellcode32 + 28)) = context.Eip;
+
+                LPVOID lp_shellcode = VirtualAllocEx(h_target_process, NULL, sizeof(shellcode32), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+                WriteProcessMemory(h_target_process, lp_shellcode, shellcode32, sizeof(shellcode32), NULL);
+                
                 context.Eip = (DWORD)lp_shellcode;
-                #endif
+            #endif
 
                 SetThreadContext(h_thread, &context);
                 ResumeThread(h_thread);

@@ -11,34 +11,34 @@ namespace EB
                 _memory_chunk_size = size;
             }
             
-            bool write_byte(HANDLE const& handle, DWORD const& addr, BYTE const& byte)
+            bool write_byte(HANDLE const& handle, uintptr_t const& addr, BYTE const& byte)
             {
                 return WriteProcessMemory(handle, (LPVOID)addr, &byte, 1, NULL);
             }
 
-            bool write(HANDLE const& handle, DWORD const& addr, std::vector<BYTE> const& bytes)
+            bool write(HANDLE const& handle, uintptr_t const& addr, std::vector<BYTE> const& bytes)
             {
                 return WriteProcessMemory(handle, (LPVOID)addr, bytes.data(), bytes.size(), NULL);
             }
 
-            BYTE read_byte(HANDLE const& handle, DWORD const& addr)
+            BYTE read_byte(HANDLE const& handle, uintptr_t const& addr)
             {
                 BYTE byte;
                 return ReadProcessMemory(handle, (LPVOID)addr, &byte, 1, NULL) ? byte : 0x00;
             }
 
-            bool read(HANDLE const& handle, BYTE* buffer, DWORD const& addr, size_t const& size)
+            bool read(HANDLE const& handle, BYTE* buffer, uintptr_t const& addr, size_t const& size)
             {
                 return ReadProcessMemory(handle, (LPVOID)addr, buffer, size, NULL);
             }
 
-            void fill_with_nop(HANDLE const& handle, DWORD const& addr, size_t const& size)
+            void fill_with_nop(HANDLE const& handle, uintptr_t const& addr, size_t const& size)
             {
                 for(int i=0; i < size; i++)
                     write_byte(handle, addr + i, 0x90);
             }
 
-            bool search_bytes(HANDLE const& handle, DWORD const& start_addr, DWORD const& end_addr, std::vector<BYTE> const& bytes, DWORD& addr_out, size_t const& nth)
+            bool search_bytes(HANDLE const& handle, uintptr_t const& start_addr, uintptr_t const& end_addr, std::vector<BYTE> const& bytes, uintptr_t& addr_out, size_t const& nth)
             {
                 DWORD current_addr = start_addr;
 

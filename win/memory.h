@@ -15,14 +15,14 @@ namespace EB
 
             void set_memory_chunk_size(size_t const& size);
 
-            bool write_byte(HANDLE const& handle, DWORD const& addr, BYTE const& byte);
-            bool write(HANDLE const& handle, DWORD const& addr, std::vector<BYTE> const& bytes);
+            bool write_byte(HANDLE const& handle, uintptr_t const& addr, BYTE const& byte);
+            bool write(HANDLE const& handle, uintptr_t const& addr, std::vector<BYTE> const& bytes);
 
-            BYTE read_byte(HANDLE const& handle, DWORD const& addr);
-            bool read(HANDLE const& handle, BYTE* buffer, DWORD const& addr, size_t const& size);
+            BYTE read_byte(HANDLE const& handle, uintptr_t const& addr);
+            bool read(HANDLE const& handle, BYTE* buffer, uintptr_t const& addr, size_t const& size);
 
-            void fill_with_nop(HANDLE const& handle, DWORD const& addr, size_t const& size);
-            bool search_bytes(HANDLE const& handle, DWORD const& start_addr, DWORD const& end_addr, std::vector<BYTE> const& bytes, DWORD& addr_out, size_t const& nth=0);
+            void fill_with_nop(HANDLE const& handle, uintptr_t const& addr, size_t const& size);
+            bool search_bytes(HANDLE const& handle, uintptr_t const& start_addr, uintptr_t const& end_addr, std::vector<BYTE> const& bytes, uintptr_t& addr_out, size_t const& nth=0);
         }
     }
 }
