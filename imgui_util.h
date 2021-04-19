@@ -2,8 +2,10 @@
 
 #include <Windows.h>
 #include "imgui.h"
+#include "imgui_internal.h"
 
 #include <string>
+#include <cmath>
 #include "stdarg.h"
 
 namespace EB
@@ -31,6 +33,13 @@ namespace EB
         namespace Layout
         {
             void center_item(float item_width);
+        }
+
+        namespace UI
+        {
+            bool loading_bar(const char* label, float value, const ImVec2& size_arg, const ImU32& bg_col, const ImU32& fg_col);
+            bool loading_spinner(const char* label, float radius, int thickness, const ImU32& color);
+            void loading_circle(const char* label, const float indicator_radius, const ImVec4& main_color, const ImVec4& backdrop_color, const int circle_count, const float speed);
         }
 
         void new_line();
