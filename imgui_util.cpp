@@ -114,8 +114,8 @@ namespace EB
                 EB::ImGui::UI::loading_bar("##test_bar", 
                                            0.25f, 
                                            { 400.f, 6.f },
-                                           ImGui::ColorConvertFloat4ToU32({ 255.f, 255.f, 255.f, 1.f }), 
-                                           ImGui::ColorConvertFloat4ToU32({ 255.f, 0.f, 0.f, 1.f }));
+                                           ImGui::ColorConvertFloat4ToU32(ImColor(255.f, 255.f, 255.f)), 
+                                           ImGui::ColorConvertFloat4ToU32(ImColor(255.f, 0.f, 0.f)));
             */
             bool loading_bar(const char* label, float value,  const ImVec2& size_arg, const ImU32& bg_col, const ImU32& fg_col) 
             {
@@ -201,7 +201,7 @@ namespace EB
             }
 
             // Credit to: https://github.com/ocornut/imgui/issues/1901#issuecomment-444929973
-            // EB::ImGui::UI::loading_circle("##test", 25, { 255.f, 255.f, 255.f, 1.f }, { 255.f, 0.f, 0.f, 1.f }, 6, 5.f);
+            // EB::ImGui::UI::loading_circle("##test", 25, ImColor(255.f, 255.f, 255.f), ImColor(255.f, 0.f, 0.f), 6, 5.f);
             void loading_circle(const char* label, const float indicator_radius, const ImVec4& main_color, const ImVec4& backdrop_color, const int circle_count, const float speed)
             {
                 ImGuiWindow* window = ::ImGui::GetCurrentWindow();
