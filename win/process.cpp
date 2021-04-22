@@ -6,13 +6,8 @@ namespace EB
     {
         namespace Process
         {
-            /* External Process */
-            // Private Method(s)
-            void ExternalProcess::get_process_info(DWORD const* process_id, std::wstring const* process_name)
+            void loop_process_list(LoopProcessListCallback callback)
             {
-                if(process_id   == nullptr
-                   && process_name == nullptr) return;
-
                 PROCESSENTRY32W* process_info = new PROCESSENTRY32W();
                 process_info->dwSize = sizeof(*process_info);
 
@@ -24,29 +19,49 @@ namespace EB
                 {
                     do
                     {
-                        if(process_id != nullptr)
-                        {
-                            if(*process_id == process_info->th32ProcessID)
-                            {
-                                this->process_info = process_info;
-                                goto loop_end;
-                            }
-                        }
-                        else if(process_name != nullptr)
-                        {
-                            if(!process_name->compare(process_info->szExeFile))
-                            {
-                                this->process_info = process_info;
-                                goto loop_end;
-                            }
-                        }
+                        if(!callback(process_info))
+                            goto loop_end;
                     } 
                     while(Process32NextW(processes_snapshot, process_info));
                 }
 
-                loop_end:
+            loop_end:
                 CloseHandle(processes_snapshot);
                 return;
+            }
+
+            /* External Process */
+            // Private Method(s)
+            void ExternalProcess::get_process_info(DWORD const* process_id, std::wstring const* process_name)
+            {
+                if(process_id    == nullptr
+                && process_name  == nullptr) return;
+
+                PROCESSENTRY32W* process_info = nullptr;
+
+                loop_process_list([&process_info, &process_id, &process_name](PROCESSENTRY32W* proc_info) -> bool
+                {
+                    if(process_id != nullptr)
+                    {
+                        if(*process_id == proc_info->th32ProcessID)
+                        {
+                            process_info = proc_info;
+                            return false;
+                        }
+                    }
+                    else if(process_name != nullptr)
+                    {
+                        if(!process_name->compare(proc_info->szExeFile))
+                        {
+                            process_info = proc_info;
+                            return false;
+                        }
+                    }
+
+                    return true;
+                });
+
+                this->process_info = process_info;
             }
 
             // Constructor(s)
@@ -63,8 +78,6 @@ namespace EB
             // Destructor
             ExternalProcess::~ExternalProcess()
             {
-                delete this->process_info;
-
                 if(this->process_handle != NULL)
                     CloseHandle(this->process_handle);
             }
@@ -403,7 +416,6 @@ namespace EB
                 while(thread_exit_code == STILL_ACTIVE);
 
                 VirtualFreeEx(h_target_process, lp_dll_path,     0, MEM_RELEASE);
-                VirtualFreeEx(h_target_process, lp_loadlibraryw, 0, MEM_RELEASE);
 
                 CloseHandle(h_target_process);
                 CloseHandle(h_thread);
