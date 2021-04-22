@@ -8,6 +8,7 @@
 #include <vector>
 #include <thread>
 #include <chrono>
+#include <functional>
 
 #include "shellcode.h"
 
@@ -142,6 +143,8 @@ namespace EB
                                                           OUT CLIENT_ID*          ClientID);
             /* End Definations for RtlCreateUserThread */
 
+            typedef std::function<bool(PROCESSENTRY32W*)> LoopProcessListCallback;
+
             struct ModuleInfo
             {
                 std::wstring module_path;      // szExePath
@@ -183,6 +186,8 @@ namespace EB
                 NtCreateThreadEx,
                 RtlCreateUserThread
             };
+
+            void loop_process_list(LoopProcessListCallback callback);
 
             class ExternalProcess
             {
