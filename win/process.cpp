@@ -78,6 +78,8 @@ namespace EB
             // Destructor
             ExternalProcess::~ExternalProcess()
             {
+                delete this->process_info;
+
                 if(this->process_handle != NULL)
                     CloseHandle(this->process_handle);
             }
