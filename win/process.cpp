@@ -6,6 +6,26 @@ namespace EB
     {
         namespace Process
         {
+            // Private Functions
+            BOOL CALLBACK _enum_proc(HWND hWnd, LPARAM lParam)
+            {
+                EnumData& ed = *(EnumData*)lParam;
+                DWORD process_id = NULL;
+
+                GetWindowThreadProcessId(hWnd, &process_id);
+
+                if(ed.process_id == process_id)
+                {
+                    ed.h_wnd = hWnd;
+                    SetLastError(ERROR_SUCCESS);
+
+                    return FALSE;
+                }
+
+                return TRUE;
+            }
+
+            // Public Functions
             void loop_process_list(LoopProcessListCallback callback)
             {
                 PROCESSENTRY32W* process_info = new PROCESSENTRY32W();
@@ -30,7 +50,22 @@ namespace EB
                 return;
             }
 
-            /* External Process */
+            HWND get_window_from_process_id(DWORD const& process_id)
+            {
+                EnumData ed = { process_id, NULL };
+
+                if(!EnumWindows(_enum_proc, (LPARAM)&ed)
+                && GetLastError() == ERROR_SUCCESS) return ed.h_wnd;
+
+                return NULL;
+            }
+
+            HWND get_window_from_process_handle(HANDLE const& handle)
+            {
+                return get_window_from_process_id(GetProcessId(handle));
+            }
+
+            // External Process Class
             // Private Method(s)
             void ExternalProcess::get_process_info(DWORD const* process_id, std::wstring const* process_name)
             {
@@ -233,7 +268,7 @@ namespace EB
                 return nullptr;
             }
 
-            /* Internal Process */
+            // Internal Process Namespace
             namespace InternalProcess
             {
                 DWORD get_process_id()
@@ -292,7 +327,7 @@ namespace EB
                 }
             }
 
-            /* Injector */
+            // Injector Class
             ExternalProcess* Injector::target_process = nullptr;
 
             bool Injector::_write_dll_path(HANDLE const& h_handle, std::wstring const& dll_path, LPVOID& lp_path, size_t* wstr_size_out, size_t* buffer_size_out)

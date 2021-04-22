@@ -143,7 +143,15 @@ namespace EB
                                                           OUT CLIENT_ID*          ClientID);
             /* End Definations for RtlCreateUserThread */
 
+            // Type definations
             typedef std::function<bool(PROCESSENTRY32W*)> LoopProcessListCallback;
+
+            // Data Types
+            struct EnumData
+            {
+                DWORD process_id;
+                HWND  h_wnd;
+            };
 
             struct ModuleInfo
             {
@@ -187,8 +195,15 @@ namespace EB
                 RtlCreateUserThread
             };
 
-            void loop_process_list(LoopProcessListCallback callback);
+            // Private Functions
+            BOOL CALLBACK _enum_proc(HWND hWnd, LPARAM lParam);
 
+            // Public Functions
+            void loop_process_list(LoopProcessListCallback callback);
+            HWND get_window_from_process_id(DWORD const& process_id);
+            HWND get_window_from_process_handle(HANDLE const& handle);
+
+            // External Process Class
             class ExternalProcess
             {
             private:
@@ -221,6 +236,7 @@ namespace EB
                 ModuleInfo const* get_module(std::wstring const& module_name) const;
             };
 
+            // Internal Process Namespace
             namespace InternalProcess
             {
                 DWORD get_process_id();
@@ -230,6 +246,7 @@ namespace EB
                 ModuleInfo const* get_module(std::vector<ModuleInfo> const* module_list, std::wstring const& module_name);
             }
 
+            // Injector Class
             static class Injector
             {
             public:
