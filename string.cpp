@@ -17,6 +17,26 @@ namespace EB
             return result;
         }
 
+        void ltrim(std::string& str)
+        {
+            str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](unsigned char ch) {
+                return !std::isspace(ch);
+            }));
+        }
+
+        void rtrim(std::string& str)
+        {
+            str.erase(std::find_if(str.rbegin(), str.rend(), [](unsigned char ch) {
+                return !std::isspace(ch);
+            }).base(), str.end());
+        }
+
+        void trim(std::string& str)
+        {
+            ltrim(str);
+            rtrim(str);
+        }
+
         std::wstring to_wstring(std::string const& str)
         {
             return std::wstring(str.begin(), str.end());
