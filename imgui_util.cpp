@@ -48,9 +48,9 @@ namespace EB
                     case VK_DELETE:
                     case VK_DIVIDE:
                     case VK_NUMLOCK:
-                        scanCode |= KF_EXTENDED;
+                    scanCode |= KF_EXTENDED;
                     default:
-                        result = GetKeyNameTextA(scanCode << 16, szName, 128);
+                    result = GetKeyNameTextA(scanCode << 16, szName, 128);
                 }
 
                 if(result == 0) return "";
@@ -77,6 +77,36 @@ namespace EB
 
                 ::ImGui::SetCursorPosX(window_size.x - text_size.x);
                 ::ImGui::Text(text.c_str());
+            }
+
+            void partial_colored(std::string text_left, std::string colored_text_middle, std::string text_right, ImVec4 color, float spacing)
+            {
+                ::ImGui::Text(text_left.c_str());
+                ::ImGui::SameLine();
+
+                ::ImGui::SetCursorPosX(::ImGui::GetCursorPosX() - spacing);
+                ::ImGui::TextColored(color, colored_text_middle.c_str());
+                ::ImGui::SameLine();
+
+                ::ImGui::SetCursorPosX(::ImGui::GetCursorPosX() - spacing);
+                ::ImGui::Text(text_right.c_str());
+            }
+
+            void center_partial_colored(std::string text_left, std::string colored_text_middle, std::string text_right, ImVec4 color, float spacing)
+            {
+                ImVec2 window_size = ::ImGui::GetWindowSize();
+                ImVec2 text_size   = ::ImGui::CalcTextSize((text_left+" "+colored_text_middle+" "+text_right).c_str());
+
+                ::ImGui::SetCursorPosX((window_size.x / 2) - (text_size.x / 2));
+                ::ImGui::Text(text_left.c_str());
+                ::ImGui::SameLine();
+
+                ::ImGui::SetCursorPosX(::ImGui::GetCursorPosX() - spacing);
+                ::ImGui::TextColored(color, colored_text_middle.c_str());
+                ::ImGui::SameLine();
+
+                ::ImGui::SetCursorPosX(::ImGui::GetCursorPosX() - spacing);
+                ::ImGui::Text(text_right.c_str());
             }
 
             std::string padding(std::string text, unsigned int size, bool left_padding)
@@ -111,11 +141,11 @@ namespace EB
             // @value: between 0.f and 1.f
             // @size_arg: x is width, y is height
             /*
-                EB::ImGui::UI::loading_bar("##test_bar", 
-                                           0.25f, 
-                                           { 400.f, 6.f },
-                                           ImGui::ColorConvertFloat4ToU32(ImColor(255.f, 255.f, 255.f)), 
-                                           ImGui::ColorConvertFloat4ToU32(ImColor(255.f, 0.f, 0.f)));
+            EB::ImGui::UI::loading_bar("##test_bar", 
+            0.25f, 
+            { 400.f, 6.f },
+            ImGui::ColorConvertFloat4ToU32(ImColor(255.f, 255.f, 255.f)), 
+            ImGui::ColorConvertFloat4ToU32(ImColor(255.f, 0.f, 0.f)));
             */
             bool loading_bar(const char* label, float value,  const ImVec2& size_arg, const ImU32& bg_col, const ImU32& fg_col) 
             {

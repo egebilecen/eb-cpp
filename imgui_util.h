@@ -27,6 +27,8 @@ namespace EB
         {
             void center(std::string text);
             void right(std::string text);
+            void partial_colored(std::string text_left, std::string colored_text_middle, std::string text_right, ImVec4 color, float spacing=8.f);
+            void center_partial_colored(std::string text_left, std::string colored_text_middle, std::string text_right, ImVec4 color, float spacing=8.f);
             std::string padding(std::string text, unsigned int size, bool left_padding=true);
         }
         
