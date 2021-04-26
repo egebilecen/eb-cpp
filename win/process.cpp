@@ -148,7 +148,7 @@ namespace EB
                     do
                     {
                         ModuleInfo mod_info(std::wstring(module_info.szExePath), std::wstring(module_info.szModule),
-                                            module_info.modBaseAddr,             module_info.modBaseSize,
+                                            (uintptr_t)module_info.modBaseAddr,  module_info.modBaseSize,
                                             module_info.hModule);
 
                         this->module_list.push_back(mod_info);
@@ -302,7 +302,7 @@ namespace EB
                         do
                         {
                             ModuleInfo mod_info(std::wstring(module_info.szExePath), std::wstring(module_info.szModule),
-                                                module_info.modBaseAddr,             module_info.modBaseSize,
+                                                (uintptr_t)module_info.modBaseAddr,  module_info.modBaseSize,
                                                 module_info.hModule);
 
                             mod_list.push_back(mod_info);

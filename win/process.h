@@ -157,12 +157,12 @@ namespace EB
             {
                 std::wstring module_path;      // szExePath
                 std::wstring module_name;      // szModule
-                BYTE*        module_base_addr; // modBaseAddr
+                uintptr_t    module_base_addr; // modBaseAddr
                 DWORD        module_base_size; // modBaseSize
                 HMODULE      module_handle;    // hModule
 
                 ModuleInfo(std::wstring module_path,      std::wstring module_name,
-                           BYTE*        module_base_addr, DWORD        module_base_size,
+                           uintptr_t    module_base_addr, DWORD        module_base_size,
                            HMODULE      module_handle)
                     : module_path(module_path),           module_name(module_name),
                     module_base_addr(module_base_addr), module_base_size(module_base_size),
