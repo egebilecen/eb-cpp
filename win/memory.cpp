@@ -35,8 +35,13 @@ namespace EB
 
             void fill_with_nop(HANDLE const& handle, uintptr_t const& addr, size_t const& size)
             {
+                std::vector<BYTE> bytes;
+                bytes.reserve(size);
+
                 for(int i=0; i < size; i++)
-                    write_byte(handle, addr + i, 0x90);
+                    bytes.emplace_back(0x90);
+
+                write(handle, addr, bytes);
             }
 
             bool search_bytes(HANDLE const& handle, uintptr_t const& start_addr, uintptr_t const& end_addr, std::vector<BYTE> const& bytes, uintptr_t& addr_out, size_t const& nth)
@@ -124,8 +129,13 @@ namespace EB
 
             void fill_with_nop(uintptr_t const& addr, size_t const& size)
             {
+                std::vector<BYTE> bytes;
+                bytes.reserve(size);
+
                 for(int i=0; i < size; i++)
-                    write_byte(addr + i, 0x90);
+                    bytes.emplace_back(0x90);
+
+                write(addr, bytes);
             }
 
             bool search_bytes(uintptr_t const& start_addr, uintptr_t const& end_addr, std::vector<BYTE> const& bytes, uintptr_t& addr_out, size_t const& nth)
