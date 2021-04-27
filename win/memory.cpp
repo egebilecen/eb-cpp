@@ -12,14 +12,22 @@ namespace EB
             }
             
             // External Functions
-            bool write_byte(HANDLE const& handle, uintptr_t const& addr, BYTE const& byte)
+            void write_byte(HANDLE const& handle, uintptr_t const& addr, BYTE const& byte)
             {
-                return WriteProcessMemory(handle, (LPVOID)addr, &byte, 1, NULL);
+                DWORD old_protect;
+
+                VirtualProtect((void*)addr, 1, PAGE_READWRITE, &old_protect);
+                WriteProcessMemory(handle, (LPVOID)addr, &byte, 1, NULL);
+                VirtualProtect((void*)addr, 1, old_protect, &old_protect);
             }
 
-            bool write(HANDLE const& handle, uintptr_t const& addr, std::vector<BYTE> const& bytes)
+            void write(HANDLE const& handle, uintptr_t const& addr, std::vector<BYTE> const& bytes)
             {
-                return WriteProcessMemory(handle, (LPVOID)addr, bytes.data(), bytes.size(), NULL);
+                DWORD old_protect;
+
+                VirtualProtect((void*)addr, bytes.size(), PAGE_READWRITE, &old_protect);
+                WriteProcessMemory(handle, (LPVOID)addr, bytes.data(), bytes.size(), NULL);
+                VirtualProtect((void*)addr, bytes.size(), old_protect, &old_protect);
             }
 
             BYTE read_byte(HANDLE const& handle, uintptr_t const& addr)
@@ -28,9 +36,9 @@ namespace EB
                 return ReadProcessMemory(handle, (LPVOID)addr, &byte, 1, NULL) ? byte : 0x00;
             }
 
-            bool read(HANDLE const& handle, BYTE* buffer, uintptr_t const& addr, size_t const& size)
+            void read(HANDLE const& handle, BYTE* buffer, uintptr_t const& addr, size_t const& size)
             {
-                return ReadProcessMemory(handle, (LPVOID)addr, buffer, size, NULL);
+                ReadProcessMemory(handle, (LPVOID)addr, buffer, size, NULL);
             }
 
             void fill_with_nop(HANDLE const& handle, uintptr_t const& addr, size_t const& size)
@@ -100,18 +108,25 @@ namespace EB
             }
 
             // Internal Functions
-            bool write_byte(uintptr_t const& addr, BYTE const& byte)
+            void write_byte(uintptr_t const& addr, BYTE const& byte)
             {
+                DWORD old_protect;
+
+                VirtualProtect((void*)addr, 1, PAGE_READWRITE, &old_protect);
                 *(BYTE*)addr = byte;
-                return true;
+                VirtualProtect((void*)addr, 1, old_protect, &old_protect);
             }
 
-            bool write(uintptr_t const& addr, std::vector<BYTE> const& bytes)
+            void write(uintptr_t const& addr, std::vector<BYTE> const& bytes)
             {
+                DWORD old_protect;
+
+                VirtualProtect((void*)addr, bytes.size(), PAGE_READWRITE, &old_protect);
+                
                 for(size_t i=0; i < bytes.size(); i++)
                     *(BYTE*)(addr + i) = bytes[i];
 
-                return true;
+                VirtualProtect((void*)addr, bytes.size(), old_protect, &old_protect);
             }
 
             BYTE read_byte(uintptr_t const& addr)
@@ -119,12 +134,10 @@ namespace EB
                 return *(BYTE*)addr;
             }
 
-            bool read(BYTE* buffer, uintptr_t const& addr, size_t const& size)
+            void read(BYTE* buffer, uintptr_t const& addr, size_t const& size)
             {
                 for(size_t i=0; i < size; i++)
                     buffer[i] = *(BYTE*)(addr + i);
-
-                return true;
             }
 
             void fill_with_nop(uintptr_t const& addr, size_t const& size)
