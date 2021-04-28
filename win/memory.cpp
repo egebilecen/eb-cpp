@@ -10,7 +10,7 @@ namespace EB
             {
                 _memory_chunk_size = size;
             }
-            
+
             // External Functions
             void write_byte(HANDLE const& handle, uintptr_t const& addr, BYTE const& byte)
             {
@@ -28,6 +28,15 @@ namespace EB
                 VirtualProtectEx(handle, (void*)addr, bytes.size(), PAGE_READWRITE, &old_protect);
                 WriteProcessMemory(handle, (LPVOID)addr, bytes.data(), bytes.size(), NULL);
                 VirtualProtectEx(handle, (void*)addr, bytes.size(), old_protect, &old_protect);
+            }
+
+            void write(HANDLE const& handle, uintptr_t const& addr, BYTE* bytes, size_t const& size)
+            {
+                DWORD old_protect;
+
+                VirtualProtectEx(handle, (void*)addr, size, PAGE_READWRITE, &old_protect);
+                WriteProcessMemory(handle, (LPVOID)addr, bytes, size, NULL);
+                VirtualProtectEx(handle, (void*)addr, size, old_protect, &old_protect);
             }
 
             BYTE read_byte(HANDLE const& handle, uintptr_t const& addr)
@@ -63,7 +72,7 @@ namespace EB
                 size_t found = 0;
 
                 while(current_addr >= start_addr
-                &&    current_addr <= end_addr)
+                      &&    current_addr <= end_addr)
                 {
                     if(!ReadProcessMemory(handle, (LPVOID)current_addr, memory_chunk, chunk_size, NULL))
                     {
@@ -88,7 +97,7 @@ namespace EB
                             }
 
                             if(match_count == bytes.size()
-                            && ++found == (nth+1))
+                               && ++found == (nth+1))
                             {
                                 addr_out = current_addr + i;
 
@@ -122,11 +131,23 @@ namespace EB
                 DWORD old_protect;
 
                 VirtualProtect((void*)addr, bytes.size(), PAGE_READWRITE, &old_protect);
-                
+
                 for(size_t i=0; i < bytes.size(); i++)
                     *(BYTE*)(addr + i) = bytes[i];
 
                 VirtualProtect((void*)addr, bytes.size(), old_protect, &old_protect);
+            }
+
+            void write(uintptr_t const& addr, BYTE* bytes, size_t const& size)
+            {
+                DWORD old_protect;
+
+                VirtualProtect((void*)addr, size, PAGE_READWRITE, &old_protect);
+
+                for(size_t i=0; i < size; i++)
+                    *(BYTE*)(addr + i) = bytes[i];
+
+                VirtualProtect((void*)addr, size, old_protect, &old_protect);
             }
 
             BYTE read_byte(uintptr_t const& addr)
@@ -172,7 +193,7 @@ namespace EB
                         }
 
                         if(match_count == bytes.size()
-                            && ++found == (nth+1))
+                           && ++found == (nth+1))
                         {
                             addr_out = start_addr + i;
                             return true;
