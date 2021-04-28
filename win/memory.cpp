@@ -16,18 +16,18 @@ namespace EB
             {
                 DWORD old_protect;
 
-                VirtualProtect((void*)addr, 1, PAGE_READWRITE, &old_protect);
+                VirtualProtectEx(handle, (void*)addr, 1, PAGE_READWRITE, &old_protect);
                 WriteProcessMemory(handle, (LPVOID)addr, &byte, 1, NULL);
-                VirtualProtect((void*)addr, 1, old_protect, &old_protect);
+                VirtualProtectEx(handle, (void*)addr, 1, old_protect, &old_protect);
             }
 
             void write(HANDLE const& handle, uintptr_t const& addr, std::vector<BYTE> const& bytes)
             {
                 DWORD old_protect;
 
-                VirtualProtect((void*)addr, bytes.size(), PAGE_READWRITE, &old_protect);
+                VirtualProtectEx(handle, (void*)addr, bytes.size(), PAGE_READWRITE, &old_protect);
                 WriteProcessMemory(handle, (LPVOID)addr, bytes.data(), bytes.size(), NULL);
-                VirtualProtect((void*)addr, bytes.size(), old_protect, &old_protect);
+                VirtualProtectEx(handle, (void*)addr, bytes.size(), old_protect, &old_protect);
             }
 
             BYTE read_byte(HANDLE const& handle, uintptr_t const& addr)
