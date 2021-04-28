@@ -72,7 +72,7 @@ namespace EB
                 size_t found = 0;
 
                 while(current_addr >= start_addr
-                      &&    current_addr <= end_addr)
+                &&    current_addr <= end_addr)
                 {
                     if(!ReadProcessMemory(handle, (LPVOID)current_addr, memory_chunk, chunk_size, NULL))
                     {
@@ -97,7 +97,7 @@ namespace EB
                             }
 
                             if(match_count == bytes.size()
-                               && ++found == (nth+1))
+                            && ++found == (nth+1))
                             {
                                 addr_out = current_addr + i;
 
