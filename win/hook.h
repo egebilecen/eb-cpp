@@ -9,16 +9,10 @@ namespace EB
     {
         namespace Hook
         {
-            namespace x86
-            {
-                bool relative_jmp(HANDLE const& handle, uintptr_t const& addr, LPVOID func, size_t const& size);
-                bool absolute_jmp(HANDLE const& handle, uintptr_t const& addr, LPVOID func, size_t const& size);
-            }
-
-            namespace x64
-            {
-                bool absolute_jmp(HANDLE const& handle, uintptr_t const& addr, LPVOID func, size_t const& size);
-            }
+        #ifndef _WIN64
+            bool relative_jmp(HANDLE const& handle, uintptr_t const& addr, LPVOID func, size_t const& size);
+        #endif
+            bool absolute_jmp(HANDLE const& handle, uintptr_t const& addr, LPVOID func, size_t const& size);
         }
     }
 }
