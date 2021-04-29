@@ -37,6 +37,20 @@ namespace EB
             rtrim(str);
         }
 
+        void lowercase(std::string& str)
+        {
+            std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){
+                return std::tolower(c);
+            });
+        }
+
+        void uppercase(std::string& str)
+        {
+            std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c){
+                return std::toupper(c);
+            });
+        }
+
         std::wstring to_wstring(std::string const& str)
         {
             return std::wstring(str.begin(), str.end());
