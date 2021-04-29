@@ -119,6 +119,59 @@ namespace EB
                 return true;
             #endif
             }
+            
+            bool IAT(std::string const& module_name, std::string const& func_name, LPVOID new_func, LPVOID out_old_func) 
+            {
+                PIMAGE_DOS_HEADER dos_header = (PIMAGE_DOS_HEADER)GetModuleHandleW(NULL);
+                PIMAGE_NT_HEADERS nt_header  = (PIMAGE_NT_HEADERS)((uintptr_t)dos_header + dos_header->e_lfanew);
+
+                if(nt_header->Signature != IMAGE_NT_SIGNATURE)
+                    return false;
+
+                PIMAGE_IMPORT_DESCRIPTOR import_descriptor = (PIMAGE_IMPORT_DESCRIPTOR)((uintptr_t)dos_header + nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+
+                for(size_t i=0; import_descriptor[i].Characteristics != 0; i++)
+                {
+                    char* dll_name = (char*)((uintptr_t)dos_header + import_descriptor[i].Name);
+
+                    if(module_name != std::string(dll_name))
+                        continue;
+
+                    if(!import_descriptor[i].FirstThunk || !import_descriptor[i].OriginalFirstThunk)
+                        return false;
+
+                    PIMAGE_THUNK_DATA thunk_data          = (PIMAGE_THUNK_DATA)((uintptr_t)dos_header + import_descriptor[i].FirstThunk);
+                    PIMAGE_THUNK_DATA original_thunk_data = (PIMAGE_THUNK_DATA)((uintptr_t)dos_header + import_descriptor[i].OriginalFirstThunk);
+
+                    for(; original_thunk_data->u1.Function != NULL; original_thunk_data++, thunk_data++)
+                    {
+                        if(original_thunk_data->u1.Ordinal & IMAGE_ORDINAL_FLAG)
+                            continue;
+
+                        PIMAGE_IMPORT_BY_NAME import_data = (PIMAGE_IMPORT_BY_NAME)((uintptr_t)dos_header + original_thunk_data->u1.AddressOfData);
+
+                        if(module_name != std::string((char*)import_data->Name))
+                            continue;
+
+                        DWORD junk = 0;
+                        MEMORY_BASIC_INFORMATION mbi;
+
+                        VirtualQuery(thunk_data, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
+                        if(!VirtualProtect(mbi.BaseAddress, mbi.RegionSize, PAGE_EXECUTE_READWRITE, &mbi.Protect))
+                            return false;
+
+                        if(out_old_func != NULL)
+                            out_old_func = (void**)((uintptr_t)thunk_data->u1.Function);
+
+                        thunk_data->u1.Function = (uintptr_t)new_func;
+
+                        if(VirtualProtect(mbi.BaseAddress, mbi.RegionSize, mbi.Protect, &junk))
+                            return true;
+                    }
+                }
+
+                return true;
+            }
         }
     }
 }

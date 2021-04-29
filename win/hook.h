@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <cstdint>
+#include <string>
 
 namespace EB
 {
@@ -15,6 +16,8 @@ namespace EB
         #endif
             bool absolute_jmp(HANDLE const& handle, uintptr_t const& addr, LPVOID func, size_t const& size);
             bool absolute_jmp(uintptr_t const& addr, LPVOID func, size_t const& size);
+
+            bool IAT(std::string const& module_name, std::string const& func_name, LPVOID new_func, LPVOID out_old_func=NULL);
         }
     }
 }

@@ -16,7 +16,7 @@ namespace EB
             {
                 DWORD old_protect;
 
-                VirtualProtectEx(handle, (void*)addr, 1, PAGE_READWRITE, &old_protect);
+                VirtualProtectEx(handle, (void*)addr, 1, PAGE_EXECUTE_READWRITE, &old_protect);
                 WriteProcessMemory(handle, (LPVOID)addr, &byte, 1, NULL);
                 VirtualProtectEx(handle, (void*)addr, 1, old_protect, &old_protect);
             }
@@ -25,7 +25,7 @@ namespace EB
             {
                 DWORD old_protect;
 
-                VirtualProtectEx(handle, (void*)addr, bytes.size(), PAGE_READWRITE, &old_protect);
+                VirtualProtectEx(handle, (void*)addr, bytes.size(), PAGE_EXECUTE_READWRITE, &old_protect);
                 WriteProcessMemory(handle, (LPVOID)addr, bytes.data(), bytes.size(), NULL);
                 VirtualProtectEx(handle, (void*)addr, bytes.size(), old_protect, &old_protect);
             }
@@ -34,7 +34,7 @@ namespace EB
             {
                 DWORD old_protect;
 
-                VirtualProtectEx(handle, (void*)addr, size, PAGE_READWRITE, &old_protect);
+                VirtualProtectEx(handle, (void*)addr, size, PAGE_EXECUTE_READWRITE, &old_protect);
                 WriteProcessMemory(handle, (LPVOID)addr, bytes, size, NULL);
                 VirtualProtectEx(handle, (void*)addr, size, old_protect, &old_protect);
             }
@@ -121,7 +121,7 @@ namespace EB
             {
                 DWORD old_protect;
 
-                VirtualProtect((void*)addr, 1, PAGE_READWRITE, &old_protect);
+                VirtualProtect((void*)addr, 1, PAGE_EXECUTE_READWRITE, &old_protect);
                 *(BYTE*)addr = byte;
                 VirtualProtect((void*)addr, 1, old_protect, &old_protect);
             }
@@ -130,7 +130,7 @@ namespace EB
             {
                 DWORD old_protect;
 
-                VirtualProtect((void*)addr, bytes.size(), PAGE_READWRITE, &old_protect);
+                VirtualProtect((void*)addr, bytes.size(), PAGE_EXECUTE_READWRITE, &old_protect);
 
                 for(size_t i=0; i < bytes.size(); i++)
                     *(BYTE*)(addr + i) = bytes[i];
@@ -142,7 +142,7 @@ namespace EB
             {
                 DWORD old_protect;
 
-                VirtualProtect((void*)addr, size, PAGE_READWRITE, &old_protect);
+                VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &old_protect);
 
                 for(size_t i=0; i < size; i++)
                     *(BYTE*)(addr + i) = bytes[i];
