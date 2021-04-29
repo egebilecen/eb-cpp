@@ -1,9 +1,9 @@
 #pragma once
 
-#include<Windows.h>
-#include<vector>
-#include<array>
-#include<memory>
+#include <Windows.h>
+#include <vector>
+#include <array>
+#include <memory>
 
 namespace EB
 {
