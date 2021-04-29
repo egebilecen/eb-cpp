@@ -132,9 +132,9 @@ namespace EB
 
                 for(size_t i=0; import_descriptor[i].Characteristics != 0; i++)
                 {
-                    char* dll_name = (char*)((uintptr_t)dos_header + import_descriptor[i].Name);
+                    std::string dll_name = std::string((char*)((uintptr_t)dos_header + import_descriptor[i].Name));
 
-                    if(module_name != std::string(dll_name))
+                    if(module_name != EB::String::lowercase(dll_name))
                         continue;
 
                     if(!import_descriptor[i].FirstThunk || !import_descriptor[i].OriginalFirstThunk)
@@ -149,8 +149,9 @@ namespace EB
                             continue;
 
                         PIMAGE_IMPORT_BY_NAME import_data = (PIMAGE_IMPORT_BY_NAME)((uintptr_t)dos_header + original_thunk_data->u1.AddressOfData);
+                        std::string import_data_name = std::string((char*)import_data->Name);
 
-                        if(module_name != std::string((char*)import_data->Name))
+                        if(func_name != import_data_name)
                             continue;
 
                         DWORD junk = 0;

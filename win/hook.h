@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 
+#include "eb/string.h"
+
 namespace EB
 {
     namespace Windows
