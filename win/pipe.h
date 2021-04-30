@@ -4,14 +4,6 @@
 #include <string>
 #include <vector>
 
-// DEBUG
-#define NAMEDPIPE_DEBUG 1
-#if NAMEDPIPE_DEBUG
-#define PRINT_LASTERROR() do{ std::cout << GetLastError() << "\n"; }while(0);
-#include <iostream>
-#endif
-// end DEBUG
-
 #define NAMEDPIPE_CLIENTHANDLER_ERROR_NONE             1
 #define NAMEDPIPE_CLIENTHANDLER_PARAM_NULL_ERROR       ((DWORD)-1)
 #define NAMEDPIPE_CLIENTHANDLER_BUFFER_NULL_ERROR      ((DWORD)-2)
