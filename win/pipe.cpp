@@ -286,10 +286,27 @@ namespace EB
                 return true;
             }
 
-            bool NamedPipeClient::read()
+            size_t NamedPipeClient::read()
             {
-                
-                return true;
+                DWORD bytes_read = 0;
+                BOOL  is_success = FALSE;
+
+                do
+                {
+                    is_success = ReadFile(this->pipe,
+                                          this->buffer,
+                                          this->buffer_size,
+                                          &bytes_read,
+                                          NULL);
+
+                    if(!is_success && GetLastError() != ERROR_MORE_DATA)
+                        break; 
+                }
+                while(!is_success);
+
+                if(is_success) this->last_error = NamedPipeClient::LAST_ERROR::NONE;
+
+                return bytes_read;
             }
 
             NamedPipeClient::LAST_ERROR NamedPipeClient::get_last_error() const

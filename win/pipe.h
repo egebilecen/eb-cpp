@@ -82,7 +82,7 @@ namespace EB
                 ~NamedPipeClient();
                 bool write(BYTE* bytes, size_t const& size);
                 bool write(std::vector<BYTE> const& bytes);
-                bool read();
+                size_t read();
                 LAST_ERROR get_last_error() const;
             };
         }
