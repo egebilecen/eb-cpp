@@ -12,14 +12,14 @@ namespace EB
                 if(lp_param == NULL)
                     return NAMEDPIPE_CLIENTHANDLER_PARAM_NULL_ERROR;
 
-                NamedPipeServer* named_pipe_server = (NamedPipeServer*)lp_param;
+                PipeData* pipe_data = (PipeData*)lp_param;
 
-                if(named_pipe_server->data_handler == NULL)
+                if(pipe_data->data_handler == NULL)
                     return NAMEDPIPE_CLIENTHANDLER_DATAHANDLER_NULL_ERROR;
 
                 HANDLE h_heap        = GetProcessHeap();
-                BYTE* request_buffer = (BYTE*)HeapAlloc(h_heap, 0, named_pipe_server->buffer_size);
-                BYTE* reply_buffer   = (BYTE*)HeapAlloc(h_heap, 0, named_pipe_server->buffer_size);
+                BYTE* request_buffer = (BYTE*)HeapAlloc(h_heap, 0, pipe_data->buffer_size);
+                BYTE* reply_buffer   = (BYTE*)HeapAlloc(h_heap, 0, pipe_data->buffer_size);
 
                 if(request_buffer == NULL
                 || reply_buffer   == NULL)
@@ -32,9 +32,9 @@ namespace EB
 
                 while(1)
                 {
-                    is_success = ReadFile(named_pipe_server->pipe,
+                    is_success = ReadFile(pipe_data->pipe,
                                           request_buffer,
-                                          named_pipe_server->buffer_size,
+                                          pipe_data->buffer_size,
                                           &bytes_read,
                                           NULL);
 
@@ -52,12 +52,12 @@ namespace EB
                         break;
                     }
 
-                    named_pipe_server->data_handler(request_buffer, bytes_read,
-                                                    reply_buffer,   reply_bytes);
+                    pipe_data->data_handler(request_buffer, bytes_read,
+                                            reply_buffer,   reply_bytes);
 
                     if(reply_bytes > 0)
                     {
-                        is_success = WriteFile(named_pipe_server->pipe, 
+                        is_success = WriteFile(pipe_data->pipe, 
                                                reply_buffer, 
                                                reply_bytes,
                                                &written_bytes, 
@@ -71,12 +71,14 @@ namespace EB
                     }
                 }
 
-                FlushFileBuffers(named_pipe_server->pipe);
-                DisconnectNamedPipe(named_pipe_server->pipe);
-                CloseHandle(named_pipe_server->pipe);
+                FlushFileBuffers(pipe_data->pipe);
+                DisconnectNamedPipe(pipe_data->pipe);
+                CloseHandle(pipe_data->pipe);
 
                 HeapFree(h_heap, 0, request_buffer);
                 HeapFree(h_heap, 0, reply_buffer);
+
+                delete pipe_data;
 
                 return NAMEDPIPE_CLIENTHANDLER_ERROR_NONE;
             }
@@ -86,41 +88,35 @@ namespace EB
             {
             }
 
-            void NamedPipeServer::create_server(HANDLE const* pipe_out)
+            void NamedPipeServer::create_server()
             {
-                if(this->pipe != NULL) 
-                {
-                    this->last_error = NamedPipeServer::LAST_ERROR::PIPE_IS_NOT_NULL;
-                    return;
-                }
-                else if(this->data_handler == NULL)
+                if(this->data_handler == NULL)
                 {
                     this->last_error = NamedPipeServer::LAST_ERROR::DataHandler_IS_NULL;
                     return;
                 }
 
                 std::string pipe_name = std::string("\\\\.\\pipe\\")+this->name;
+                this->is_started = true;
 
                 while(1)
                 {
-                    this->pipe = CreateNamedPipeA(pipe_name.c_str(),
-                                                  PIPE_ACCESS_DUPLEX,
-                                                  PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-                                                  PIPE_UNLIMITED_INSTANCES,
-                                                  this->buffer_size,
-                                                  this->buffer_size,
-                                                  0, // client timeout
-                                                  NULL);
+                    HANDLE pipe = CreateNamedPipeA(pipe_name.c_str(),
+                                                   PIPE_ACCESS_DUPLEX,
+                                                   PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                                                   PIPE_UNLIMITED_INSTANCES,
+                                                   this->buffer_size,
+                                                   this->buffer_size,
+                                                   0, // client timeout
+                                                   NULL);
 
-                    if(this->pipe == INVALID_HANDLE_VALUE)
+                    if(pipe == INVALID_HANDLE_VALUE)
                     {
                         this->last_error = NamedPipeServer::LAST_ERROR::CreateNamedPipe_FAILED;
                         return;
                     }
 
-                    pipe_out = &this->pipe;
-
-                    BOOL is_connected = ConnectNamedPipe(this->pipe, NULL) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
+                    BOOL is_connected = ConnectNamedPipe(pipe, NULL) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
 
                     this->last_error = LAST_ERROR::NONE;
 
@@ -129,33 +125,40 @@ namespace EB
                         // client is connected
                         DWORD thread_id = NULL;
 
+                        PipeData* pipe_data = new PipeData;
+                        ZeroMemory(pipe_data, sizeof(PipeData));
+
+                        pipe_data->pipe         = pipe;
+                        pipe_data->buffer_size  = this->buffer_size;
+                        pipe_data->data_handler = this->data_handler;
+
                         HANDLE h_thread = CreateThread(NULL,
                                                        0,
                                                        NamedPipeServer::client_handler,
-                                                       (LPVOID)this,
+                                                       (LPVOID)pipe_data,
                                                        0,
                                                        &thread_id);
 
                         if(h_thread == NULL)
                         {
+                            delete pipe_data;
+
                             this->last_error = NamedPipeServer::LAST_ERROR::CreateThread_FAILED;
                             return;
                         }
                         else CloseHandle(h_thread);
                     }
-                    else
-                    {
-                        CloseHandle(this->pipe);
-                        this->pipe = NULL;
-                    }
+                    else CloseHandle(pipe);
                 }
+
+                this->is_started = false;
             }
 
             void NamedPipeServer::set_buffer_size(size_t const& size)
             {
-                if(this->pipe != NULL)
+                if(this->is_started)
                 {
-                    this->last_error = NamedPipeServer::LAST_ERROR::PIPE_IS_NOT_NULL;
+                    this->last_error = NamedPipeServer::LAST_ERROR::SERVER_IS_RUNNING;
                     return;
                 }
 
@@ -165,12 +168,26 @@ namespace EB
 
             void NamedPipeServer::set_data_handler(DataHandler func)
             {
+                if(this->is_started)
+                {
+                    this->last_error = NamedPipeServer::LAST_ERROR::SERVER_IS_RUNNING;
+                    return;
+                }
+
                 this->data_handler = func;
+                this->last_error  = LAST_ERROR::NONE;
             }
 
             void NamedPipeServer::set_data_handler(DataHandler& func)
             {
+                if(this->is_started)
+                {
+                    this->last_error = NamedPipeServer::LAST_ERROR::SERVER_IS_RUNNING;
+                    return;
+                }
+
                 this->data_handler = func;
+                this->last_error  = LAST_ERROR::NONE;
             }
 
             NamedPipeServer::LAST_ERROR NamedPipeServer::get_last_error() const

@@ -4,6 +4,14 @@
 #include <string>
 #include <vector>
 
+// DEBUG
+#define NAMEDPIPE_DEBUG 1
+#if NAMEDPIPE_DEBUG
+#define PRINT_LASTERROR() do{ std::cout << GetLastError() << "\n"; }while(0);
+#include <iostream>
+#endif
+// end DEBUG
+
 #define NAMEDPIPE_CLIENTHANDLER_ERROR_NONE             1
 #define NAMEDPIPE_CLIENTHANDLER_PARAM_NULL_ERROR       ((DWORD)-1)
 #define NAMEDPIPE_CLIENTHANDLER_BUFFER_NULL_ERROR      ((DWORD)-2)
@@ -24,25 +32,31 @@ namespace EB
                 enum LAST_ERROR
                 {
                     NONE,
-                    PIPE_IS_NOT_NULL,
                     CreateNamedPipe_FAILED,
                     CreateThread_FAILED,
-                    DataHandler_IS_NULL
+                    DataHandler_IS_NULL,
+                    SERVER_IS_RUNNING
+                };
+
+                struct PipeData
+                {
+                    HANDLE pipe;
+                    size_t buffer_size;
+                    DataHandler data_handler;
                 };
 
             private:
                 std::string  name;
-
-                HANDLE       pipe         = NULL;
                 size_t       buffer_size  = 256;
-                LAST_ERROR   last_error   = LAST_ERROR::NONE;
                 DataHandler  data_handler = NULL;
+                bool         is_started   = false;
+                LAST_ERROR   last_error   = LAST_ERROR::NONE;
 
                 static DWORD WINAPI client_handler(LPVOID lp_param);
 
             public:
                 NamedPipeServer(std::string name);
-                void create_server(HANDLE const* pipe_out);
+                void create_server();
                 void set_buffer_size(size_t const& size);
                 void set_data_handler(DataHandler  func);
                 void set_data_handler(DataHandler& func);
