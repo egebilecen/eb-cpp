@@ -21,7 +21,7 @@ namespace EB
                 typedef void(*DataHandler)(BYTE* request_buffer, DWORD const& request_size, 
                                            BYTE* reply_buffer,   DWORD&       reply_size);
 
-                enum class LAST_ERROR
+                enum LAST_ERROR
                 {
                     NONE,
                     PIPE_IS_NOT_NULL,
@@ -55,7 +55,7 @@ namespace EB
                 typedef void(*DataHandler)(BYTE* request_buffer, DWORD const& request_size, 
                                            BYTE* reply_buffer,   DWORD&       reply_size);
 
-                enum class LAST_ERROR
+                enum LAST_ERROR
                 {
                     NONE,
                     PIPE_IS_NULL,
@@ -65,7 +65,8 @@ namespace EB
                     WaitNamedPipe_TIMEOUTED,
                     SetNamedPipeHandleState_FAILED,
                     NOT_ALL_BYTES_WRITTEN,
-                    WriteFile_FAILED
+                    WriteFile_FAILED,
+                    PIPE_IS_NOT_OPEN
                 };
 
             private:
@@ -74,6 +75,7 @@ namespace EB
                 size_t       buffer_size;
 
                 HANDLE       pipe         = NULL;
+                bool         is_pipe_open = false;
                 LAST_ERROR   last_error   = LAST_ERROR::NONE;
                 DataHandler  data_handler = NULL;
 
@@ -83,6 +85,7 @@ namespace EB
                 bool write(BYTE* bytes, size_t const& size);
                 bool write(std::vector<BYTE> const& bytes);
                 size_t read();
+                BYTE const* get_buffer() const;
                 LAST_ERROR get_last_error() const;
             };
         }

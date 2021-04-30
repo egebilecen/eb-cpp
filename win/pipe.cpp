@@ -12,7 +12,7 @@ namespace EB
                 if(lp_param == NULL)
                     return NAMEDPIPE_CLIENTHANDLER_PARAM_NULL_ERROR;
 
-                NamedPipeServer* named_pipe_server = (NamedPipeServer*) lp_param;
+                NamedPipeServer* named_pipe_server = (NamedPipeServer*)lp_param;
 
                 if(named_pipe_server->data_handler == NULL)
                     return NAMEDPIPE_CLIENTHANDLER_DATAHANDLER_NULL_ERROR;
@@ -22,7 +22,7 @@ namespace EB
                 BYTE* reply_buffer   = (BYTE*)HeapAlloc(h_heap, 0, named_pipe_server->buffer_size);
 
                 if(request_buffer == NULL
-                   || reply_buffer   == NULL)
+                || reply_buffer   == NULL)
                     return NAMEDPIPE_CLIENTHANDLER_BUFFER_NULL_ERROR;
 
                 DWORD bytes_read    = 0;
@@ -55,16 +55,19 @@ namespace EB
                     named_pipe_server->data_handler(request_buffer, bytes_read,
                                                     reply_buffer,   reply_bytes);
 
-                    is_success = WriteFile(named_pipe_server->pipe, 
-                                           reply_buffer, 
-                                           reply_bytes,
-                                           &written_bytes, 
-                                           NULL);
-
-                    if(!is_success || reply_bytes != written_bytes)
+                    if(reply_bytes > 0)
                     {
-                        // WriteFile failed
-                        break;
+                        is_success = WriteFile(named_pipe_server->pipe, 
+                                               reply_buffer, 
+                                               reply_bytes,
+                                               &written_bytes, 
+                                               NULL);
+
+                        if(!is_success || reply_bytes != written_bytes)
+                        {
+                            // WriteFile failed
+                            break;
+                        }
                     }
                 }
 
@@ -218,7 +221,8 @@ namespace EB
                     return;
                 }
 
-                this->last_error = LAST_ERROR::NONE;
+                this->last_error   = LAST_ERROR::NONE;
+                this->is_pipe_open = true;
             }
 
             NamedPipeClient::~NamedPipeClient()
@@ -231,7 +235,12 @@ namespace EB
                 if(this->pipe == NULL)
                 {
                     this->last_error = NamedPipeClient::LAST_ERROR::PIPE_IS_NULL;
-                    return;
+                    return false;
+                }
+                else if(!this->is_pipe_open)
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::PIPE_IS_NOT_OPEN;
+                    return false;
                 }
 
                 DWORD written_bytes = 0;
@@ -261,7 +270,12 @@ namespace EB
                 if(this->pipe == NULL)
                 {
                     this->last_error = NamedPipeClient::LAST_ERROR::PIPE_IS_NULL;
-                    return;
+                    return false;
+                }
+                else if(!this->is_pipe_open)
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::PIPE_IS_NOT_OPEN;
+                    return false;
                 }
 
                 DWORD written_bytes = 0;
@@ -288,6 +302,17 @@ namespace EB
 
             size_t NamedPipeClient::read()
             {
+                if(this->pipe == NULL)
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::PIPE_IS_NULL;
+                    return false;
+                }
+                else if(!this->is_pipe_open)
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::PIPE_IS_NOT_OPEN;
+                    return false;
+                }
+
                 DWORD bytes_read = 0;
                 BOOL  is_success = FALSE;
 
@@ -307,6 +332,11 @@ namespace EB
                 if(is_success) this->last_error = NamedPipeClient::LAST_ERROR::NONE;
 
                 return bytes_read;
+            }
+
+            BYTE const* NamedPipeClient::get_buffer() const
+            {
+                return this->buffer;
             }
 
             NamedPipeClient::LAST_ERROR NamedPipeClient::get_last_error() const
