@@ -6,6 +6,7 @@ namespace EB
     {
         namespace Pipe
         {
+            // NamedPipeServer
             DWORD WINAPI NamedPipeServer::client_handler(LPVOID lp_param)
             {
                 if(lp_param == NULL)
@@ -95,9 +96,11 @@ namespace EB
                     return;
                 }
 
+                std::string pipe_name = std::string("\\\\.\\pipe\\")+this->name;
+
                 while(1)
                 {
-                    this->pipe = CreateNamedPipeA((std::string("\\\\.\\pipe\\")+this->name).c_str(),
+                    this->pipe = CreateNamedPipeA(pipe_name.c_str(),
                                                   PIPE_ACCESS_DUPLEX,
                                                   PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
                                                   PIPE_UNLIMITED_INSTANCES,
@@ -168,6 +171,128 @@ namespace EB
             }
 
             NamedPipeServer::LAST_ERROR NamedPipeServer::get_last_error() const
+            {
+                return this->last_error;
+            }
+
+            // NamedPipeClient
+            NamedPipeClient::NamedPipeClient(std::string name, size_t recieve_buffer_size, size_t timeout)
+                : name(name), buffer_size(recieve_buffer_size)
+            {
+                std::string pipe_name = std::string("\\\\.\\pipe\\")+this->name;
+
+                while(1)
+                {
+                    this->pipe = CreateFileA(pipe_name.c_str(),
+                                             GENERIC_READ | GENERIC_WRITE,
+                                             0,
+                                             NULL,
+                                             OPEN_EXISTING,
+                                             0,
+                                             NULL);
+
+                    if(this->pipe != INVALID_HANDLE_VALUE) break;
+
+                    if(GetLastError() != ERROR_PIPE_BUSY)
+                    {
+                        this->last_error = LAST_ERROR::CANT_OPEN_PIPE;
+                        return;
+                    }
+
+                    if(!WaitNamedPipeA(pipe_name.c_str(), timeout))
+                    {
+                        this->last_error = LAST_ERROR::WaitNamedPipe_TIMEOUTED;
+                        return;
+                    }
+                }
+
+                // Pipe connected
+                BOOL  is_success = FALSE;
+                DWORD mode       = PIPE_READMODE_BYTE;
+
+                is_success = SetNamedPipeHandleState(this->pipe, &mode, NULL, NULL);
+
+                if(!is_success)
+                {
+                    this->last_error = LAST_ERROR::SetNamedPipeHandleState_FAILED;
+                    return;
+                }
+
+                this->last_error = LAST_ERROR::NONE;
+            }
+
+            NamedPipeClient::~NamedPipeClient()
+            {
+                delete[] this->buffer;
+            }
+
+            bool NamedPipeClient::write(BYTE* bytes, size_t const& size)
+            {
+                if(this->pipe == NULL)
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::PIPE_IS_NULL;
+                    return;
+                }
+
+                DWORD written_bytes = 0;
+                BOOL is_success = WriteFile(this->pipe,
+                                            bytes,
+                                            size,
+                                            &written_bytes,
+                                            NULL);
+
+                if(!is_success)
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::WriteFile_FAILED;
+                    return false;
+                }
+                else if(written_bytes != size)
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::NOT_ALL_BYTES_WRITTEN;
+                    return false;
+                }
+
+                this->last_error = NamedPipeClient::LAST_ERROR::NONE;
+                return true;
+            }
+
+            bool NamedPipeClient::write(std::vector<BYTE> const& bytes)
+            {
+                if(this->pipe == NULL)
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::PIPE_IS_NULL;
+                    return;
+                }
+
+                DWORD written_bytes = 0;
+                BOOL is_success = WriteFile(this->pipe,
+                                            bytes.data(),
+                                            bytes.size(),
+                                            &written_bytes,
+                                            NULL);
+
+                if(!is_success)
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::WriteFile_FAILED;
+                    return false;
+                }
+                else if(written_bytes != bytes.size())
+                {
+                    this->last_error = NamedPipeClient::LAST_ERROR::NOT_ALL_BYTES_WRITTEN;
+                    return false;
+                }
+
+                this->last_error = NamedPipeClient::LAST_ERROR::NONE;
+                return true;
+            }
+
+            bool NamedPipeClient::read()
+            {
+                
+                return true;
+            }
+
+            NamedPipeClient::LAST_ERROR NamedPipeClient::get_last_error() const
             {
                 return this->last_error;
             }
