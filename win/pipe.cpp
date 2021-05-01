@@ -22,7 +22,7 @@ namespace EB
                 BYTE* reply_buffer   = (BYTE*)HeapAlloc(h_heap, 0, pipe_data->buffer_size);
 
                 if(request_buffer == NULL
-                   || reply_buffer   == NULL)
+                || reply_buffer   == NULL)
                     return NAMEDPIPE_CLIENTHANDLER_BUFFER_NULL_ERROR;
 
                 DWORD bytes_read    = 0;
