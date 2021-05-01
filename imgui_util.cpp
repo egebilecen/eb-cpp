@@ -70,6 +70,15 @@ namespace EB
                 ::ImGui::Text(text.c_str());
             }
 
+            void center_colored(std::string text, ImVec4 color)
+            {
+                ImVec2 window_size = ::ImGui::GetWindowSize();
+                ImVec2 text_size   = ::ImGui::CalcTextSize(text.c_str());
+
+                ::ImGui::SetCursorPosX((window_size.x / 2) - (text_size.x / 2));
+                ::ImGui::TextColored(color, text.c_str());
+            }
+
             void right(std::string text)
             {
                 ImVec2 window_size = ::ImGui::GetWindowSize();

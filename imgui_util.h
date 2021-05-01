@@ -26,6 +26,7 @@ namespace EB
         namespace Text
         {
             void center(std::string text);
+            void center_colored(std::string text, ImVec4 color);
             void right(std::string text);
             void partial_colored(std::string text_left, std::string colored_text_middle, std::string text_right, ImVec4 color, float spacing=8.f);
             void center_partial_colored(std::string text_left, std::string colored_text_middle, std::string text_right, ImVec4 color, float spacing=8.f);
