@@ -29,8 +29,7 @@ namespace EB
             this->total_elements = rows * cols;
             this->array_ptr      = new T[this->total_elements];
 
-            int q = 0;
-            for(int i=0; i < this->total_elements; i++) this->array_ptr[i] = q++;
+            for(int i=0; i < this->total_elements; i++) this->array_ptr[i] = init_val;
         }
 
         ~Matrix()
