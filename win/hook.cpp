@@ -75,7 +75,6 @@ namespace EB
                 uintptr_t func_addr = (uintptr_t)func;
 
                 memcpy(hook_bytes + 2, &func_addr, sizeof(uintptr_t));
-
                 EB::Windows::Memory::write(handle, addr, hook_bytes, hook_size);
 
                 if(size > hook_size) 
@@ -99,7 +98,7 @@ namespace EB
                 EB::Windows::Memory::write(addr, hook_bytes, hook_size);
 
                 if(size > hook_size) 
-                    EB::Windows::Memory::fill_with_nop(handle, addr + hook_size, size - hook_size);
+                    EB::Windows::Memory::fill_with_nop(addr + hook_size, size - hook_size);
 
                 return true;
             #else // x32
