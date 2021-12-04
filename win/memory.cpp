@@ -203,6 +203,51 @@ namespace EB
 
                 return false;
             }
+
+        #ifdef _WIN64
+            uintptr_t get_function_real_address(void* func)
+            {
+                constexpr size_t opcode_size = 5;
+                byte jmp_to_func_opcode[opcode_size] = { 0x00 };
+
+                for(int i=0; i < opcode_size; i++)
+                    jmp_to_func_opcode[i] = *((byte*)((uintptr_t)func+i));
+
+                // Find the real function address from jump table
+                if(jmp_to_func_opcode[0] == 0xE9)
+                {
+                    unsigned int rel_jmp_addr = (jmp_to_func_opcode[4] << 24) 
+                        | (jmp_to_func_opcode[3] << 16)
+                        | (jmp_to_func_opcode[2] << 8 )
+                        | (jmp_to_func_opcode[1] << 0 );
+                    uintptr_t real_func_addr  = (uintptr_t)func + rel_jmp_addr;
+
+                    while(*(byte*)real_func_addr == 0xCC)
+                        real_func_addr++;
+
+                    return real_func_addr;
+                }
+
+                return 0x00;
+            }
+
+            size_t get_function_size(void* func)
+            {
+                uintptr_t real_func_addr = get_function_real_address(func);
+
+                if(real_func_addr != 0x00)
+                {
+                    size_t i = 0;
+
+                    while(*(byte*)(real_func_addr+i) != 0xC3)
+                        i++;
+
+                    return i + 1;
+                }
+
+                return 0;
+            }
+        #endif
         }
     }
 }
