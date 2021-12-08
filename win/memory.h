@@ -38,6 +38,7 @@ namespace EB
             bool search_bytes(uintptr_t const& start_addr, uintptr_t const& end_addr, std::vector<BYTE> const& bytes, uintptr_t& addr_out, size_t const& nth=0);
 
         #ifdef _WIN64
+            uintptr_t get_function_real_address(void* func);
             size_t get_function_size(void* func);
         #endif
         }

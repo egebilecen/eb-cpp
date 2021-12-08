@@ -217,9 +217,9 @@ namespace EB
                 if(jmp_to_func_opcode[0] == 0xE9)
                 {
                     unsigned int rel_jmp_addr = (jmp_to_func_opcode[4] << 24) 
-                        | (jmp_to_func_opcode[3] << 16)
-                        | (jmp_to_func_opcode[2] << 8 )
-                        | (jmp_to_func_opcode[1] << 0 );
+                                              | (jmp_to_func_opcode[3] << 16)
+                                              | (jmp_to_func_opcode[2] << 8 )
+                                              | (jmp_to_func_opcode[1] << 0 );
                     uintptr_t real_func_addr  = (uintptr_t)func + rel_jmp_addr;
 
                     while(*(byte*)real_func_addr == 0xCC)
@@ -245,7 +245,7 @@ namespace EB
                     return i + 1;
                 }
 
-                return 0;
+                return 0x00;
             }
         #endif
         }
