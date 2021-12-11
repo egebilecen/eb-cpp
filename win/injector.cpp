@@ -250,13 +250,13 @@ namespace EB
 
             if(!lp_loadlibraryw) return false;
 
-            #ifdef _WIN64
+        #ifdef _WIN64
             BYTE shell_code64[sizeof(shellcode_x64_thread_hijacking)];
             memcpy(shell_code64, shellcode_x64_thread_hijacking, sizeof(shellcode_x64_thread_hijacking));
-            #else
+        #else
             BYTE shellcode32[sizeof(shellcode_x32_thread_hijacking)];
             memcpy(shellcode32, shellcode_x32_thread_hijacking, sizeof(shellcode_x32_thread_hijacking));
-            #endif
+        #endif
 
             HANDLE h_target_process = Injector::target_process->get_process_handle();
 
@@ -277,7 +277,7 @@ namespace EB
             GetThreadContext(h_thread, &context);
 
             // Update shellcode addresses
-            #ifdef _WIN64
+        #ifdef _WIN64
             // Set dll path
             *((void**)(shell_code64 + 0)) = lp_dll_path;
             // Set loadlibraryw
@@ -289,7 +289,7 @@ namespace EB
             WriteProcessMemory(h_target_process, lp_shellcode, shell_code64, sizeof(shell_code64), NULL);
 
             context.Rip = (DWORD_PTR)lp_shellcode;
-            #else
+        #else
             // Set dll path
             *((void**)(shellcode32 + 9))  = lp_dll_path;
             // Set loadlibraryw
@@ -301,7 +301,7 @@ namespace EB
             WriteProcessMemory(h_target_process, lp_shellcode, shellcode32, sizeof(shellcode32), NULL);
 
             context.Eip = (DWORD)lp_shellcode;
-            #endif
+        #endif
 
             SetThreadContext(h_thread, &context);
             ResumeThread(h_thread);
@@ -325,19 +325,19 @@ namespace EB
             switch(inject_method)
             {
                 case InjectionMethod::LoadLibraryW:
-                return inject_via_loadlibraryw(dll_path);
+                    return inject_via_loadlibraryw(dll_path);
                 break;
 
                 case InjectionMethod::LdrLoadDll:
-                return inject_via_ldrloaddll(dll_path);
+                    return inject_via_ldrloaddll(dll_path);
                 break;
 
                 case InjectionMethod::SetWindowsHookExW:
-                return inject_via_setwindowshookex(dll_path);
+                    return inject_via_setwindowshookex(dll_path);
                 break;
 
                 case InjectionMethod::ThreadHijacking:
-                return inject_via_thread_hijacking(dll_path, 1000);
+                    return inject_via_thread_hijacking(dll_path, 1000);
                 break;
             }
 
