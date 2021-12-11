@@ -7,42 +7,44 @@ namespace EB
     {
         namespace Hook
         {
+        #ifdef _WIN64
+            constexpr size_t ABSOLUTE_JUMP_HOOK_SIZE = 13;
+            static    BYTE   ABSOLUTE_JUMP_HOOK_BYTES[ABSOLUTE_JUMP_HOOK_SIZE] = { 0x49, 0xba, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x41, 0xff, 0xe2 };
+        #else
+            constexpr size_t RELATIVE_JUMP_HOOK_SIZE = 5;
+            static    BYTE   RELATIVE_JUMP_HOOK_BYTES[RELATIVE_JUMP_HOOK_SIZE] = { 0xe9, 0x00, 0x00, 0x00, 0x00 };
+
+            constexpr size_t ABSOLUTE_JUMP_HOOK_SIZE = 8;
+            static    BYTE   ABSOLUTE_JUMP_HOOK_BYTES[ABSOLUTE_JUMP_HOOK_SIZE] = { 0x8d, 0x3d, 0x44, 0x33, 0x22, 0x11, 0xff, 0xe7 };
+        #endif
+
         #ifndef _WIN64 // x32
             bool relative_jmp(HANDLE const& handle, uintptr_t const& addr, LPVOID func, size_t const& size)
             {
-                constexpr size_t hook_size = 5;
+                if(size < RELATIVE_JUMP_HOOK_SIZE) return false;
 
-                if(size < hook_size) return false;
+                size_t relative_addr = (uintptr_t)func - (uintptr_t)addr - RELATIVE_JUMP_HOOK_SIZE;
+                memcpy(RELATIVE_JUMP_HOOK_BYTES + 1, &relative_addr, 4);
 
-                BYTE hook_bytes[hook_size] = { 0xe9, 0x00, 0x00, 0x00, 0x00 };
+                EB::Windows::Memory::write(handle, addr, RELATIVE_JUMP_HOOK_BYTES, RELATIVE_JUMP_HOOK_SIZE);
 
-                size_t relative_addr = (uintptr_t)func - (uintptr_t)addr - sizeof(hook_bytes);
-
-                memcpy(hook_bytes + 1, &relative_addr, 4);
-
-                EB::Windows::Memory::write(handle, addr, hook_bytes, hook_size);
-
-                if(size > hook_size) 
-                    EB::Windows::Memory::fill_with_nop(handle, addr + hook_size, size - hook_size);
+                if(size > RELATIVE_JUMP_HOOK_SIZE) 
+                    EB::Windows::Memory::fill_with_nop(handle, addr + RELATIVE_JUMP_HOOK_SIZE, size - RELATIVE_JUMP_HOOK_SIZE);
 
                 return true;
             }
 
             bool relative_jmp(uintptr_t const& addr, LPVOID func, size_t const& size)
             {
-                constexpr size_t hook_size = 5;
+                if(size < RELATIVE_JUMP_HOOK_SIZE) return false;
 
-                if(size < hook_size) return false;
+                size_t relative_addr = (uintptr_t)func - (uintptr_t)addr - RELATIVE_JUMP_HOOK_SIZE;
 
-                BYTE hook_bytes[hook_size] = { 0xe9, 0x00, 0x00, 0x00, 0x00 };
+                memcpy(RELATIVE_JUMP_HOOK_BYTES + 1, &relative_addr, 4);
+                EB::Windows::Memory::write(addr, RELATIVE_JUMP_HOOK_BYTES, RELATIVE_JUMP_HOOK_SIZE);
 
-                size_t relative_addr = (uintptr_t)func - (uintptr_t)addr - sizeof(hook_bytes);
-
-                memcpy(hook_bytes + 1, &relative_addr, 4);
-                EB::Windows::Memory::write(addr, hook_bytes, hook_size);
-
-                if(size > hook_size) 
-                    EB::Windows::Memory::fill_with_nop(addr + hook_size, size - hook_size);
+                if(size > RELATIVE_JUMP_HOOK_SIZE) 
+                    EB::Windows::Memory::fill_with_nop(addr + RELATIVE_JUMP_HOOK_SIZE, size - RELATIVE_JUMP_HOOK_SIZE);
 
                 return true;
             }
@@ -51,34 +53,27 @@ namespace EB
             bool absolute_jmp(HANDLE const& handle, uintptr_t const& addr, LPVOID func, size_t const& size)
             {
             #ifdef _WIN64
-                constexpr size_t hook_size = 13;
+                if(size < ABSOLUTE_JUMP_HOOK_SIZE) return false;
 
-                if(size < hook_size) return false;
-
-                BYTE hook_bytes[hook_size]  = { 0x49, 0xba, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x41, 0xff, 0xe2 };
                 uintptr_t func_addr = (uintptr_t)func;
 
-                memcpy(hook_bytes + 2, &func_addr, sizeof(uintptr_t));
+                memcpy(ABSOLUTE_JUMP_HOOK_BYTES + 2, &func_addr, sizeof(uintptr_t));
+                EB::Windows::Memory::write(handle, addr, ABSOLUTE_JUMP_HOOK_BYTES, ABSOLUTE_JUMP_HOOK_SIZE);
 
-                EB::Windows::Memory::write(handle, addr, hook_bytes, hook_size);
-
-                if(size > hook_size) 
-                    EB::Windows::Memory::fill_with_nop(handle, addr + hook_size, size - hook_size);
+                if(size > ABSOLUTE_JUMP_HOOK_SIZE) 
+                    EB::Windows::Memory::fill_with_nop(handle, addr + ABSOLUTE_JUMP_HOOK_SIZE, size - ABSOLUTE_JUMP_HOOK_SIZE);
 
                 return true;
             #else // x32
-                constexpr size_t hook_size = 8;
+                if(size < ABSOLUTE_JUMP_HOOK_SIZE) return false;
 
-                if(size < hook_size) return false;
-
-                BYTE hook_bytes[hook_size]  = { 0x8d, 0x3d, 0x44, 0x33, 0x22, 0x11, 0xff, 0xe7 };
                 uintptr_t func_addr = (uintptr_t)func;
 
-                memcpy(hook_bytes + 2, &func_addr, sizeof(uintptr_t));
-                EB::Windows::Memory::write(handle, addr, hook_bytes, hook_size);
+                memcpy(ABSOLUTE_JUMP_HOOK_BYTES + 2, &func_addr, sizeof(uintptr_t));
+                EB::Windows::Memory::write(handle, addr, ABSOLUTE_JUMP_HOOK_BYTES, ABSOLUTE_JUMP_HOOK_SIZE);
 
-                if(size > hook_size) 
-                    EB::Windows::Memory::fill_with_nop(handle, addr + hook_size, size - hook_size);
+                if(size > ABSOLUTE_JUMP_HOOK_SIZE) 
+                    EB::Windows::Memory::fill_with_nop(handle, addr + ABSOLUTE_JUMP_HOOK_SIZE, size - ABSOLUTE_JUMP_HOOK_SIZE);
 
                 return true;
             #endif
@@ -87,37 +82,65 @@ namespace EB
             bool absolute_jmp(uintptr_t const& addr, LPVOID func, size_t const& size)
             {
             #ifdef _WIN64
-                constexpr size_t hook_size = 13;
+                if(size < ABSOLUTE_JUMP_HOOK_SIZE) return false;
 
-                if(size < hook_size) return false;
-
-                BYTE hook_bytes[hook_size]  = { 0x49, 0xba, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x41, 0xff, 0xe2 };
                 uintptr_t func_addr = (uintptr_t)func;
 
-                memcpy(hook_bytes + 2, &func_addr, sizeof(uintptr_t));
-                EB::Windows::Memory::write(addr, hook_bytes, hook_size);
+                memcpy(ABSOLUTE_JUMP_HOOK_BYTES + 2, &func_addr, sizeof(uintptr_t));
+                EB::Windows::Memory::write(addr, ABSOLUTE_JUMP_HOOK_BYTES, ABSOLUTE_JUMP_HOOK_SIZE);
 
-                if(size > hook_size) 
-                    EB::Windows::Memory::fill_with_nop(addr + hook_size, size - hook_size);
+                if(size > ABSOLUTE_JUMP_HOOK_SIZE) 
+                    EB::Windows::Memory::fill_with_nop(addr + ABSOLUTE_JUMP_HOOK_SIZE, size - ABSOLUTE_JUMP_HOOK_SIZE);
 
                 return true;
             #else // x32
-                constexpr size_t hook_size = 8;
+                if(size < ABSOLUTE_JUMP_HOOK_SIZE) return false;
 
-                if(size < hook_size) return false;
-
-                BYTE hook_bytes[hook_size]  = { 0x8d, 0x3d, 0x44, 0x33, 0x22, 0x11, 0xff, 0xe7 };
                 uintptr_t func_addr = (uintptr_t)func;
 
-                memcpy(hook_bytes + 2, &func_addr, sizeof(uintptr_t));
-                EB::Windows::Memory::write(addr, hook_bytes, hook_size);
+                memcpy(ABSOLUTE_JUMP_HOOK_BYTES + 2, &func_addr, sizeof(uintptr_t));
+                EB::Windows::Memory::write(addr, ABSOLUTE_JUMP_HOOK_BYTES, ABSOLUTE_JUMP_HOOK_SIZE);
 
-                if(size > hook_size) 
-                    EB::Windows::Memory::fill_with_nop(addr + hook_size, size - hook_size);
+                if(size > ABSOLUTE_JUMP_HOOK_SIZE) 
+                    EB::Windows::Memory::fill_with_nop(addr + ABSOLUTE_JUMP_HOOK_SIZE, size - ABSOLUTE_JUMP_HOOK_SIZE);
 
                 return true;
             #endif
             }
+
+        #ifdef _WIN64
+            // Be sure to build DLL in DEBUG mode. This function won't work on RELEASE.
+            bool absolute_jmp_and_restore(uintptr_t const& addr, LPVOID func, size_t const& size)
+            {
+                if(size < ABSOLUTE_JUMP_HOOK_SIZE) return false;
+
+                uintptr_t func_addr = EB::Windows::Memory::get_function_real_address(func);
+                size_t    func_size = EB::Windows::Memory::get_function_size(func);
+
+                if(func_addr == 0x00
+                || func_size == 0x00) return false;
+
+                BYTE* bytes_to_restore = new BYTE[size];
+                byte  ret_instruction  = 0xC3;
+                DWORD old_protect;
+
+                memcpy(bytes_to_restore, (void*)addr, size);
+
+                VirtualProtect((void*)func_addr, func_size + size, PAGE_EXECUTE_READWRITE, &old_protect);
+
+                memcpy((void*)(func_addr + func_size - 1), bytes_to_restore, size);
+                *(BYTE*)(func_addr + func_size + size - 1) = 0xC3;
+
+                VirtualProtect((void*)func_addr, func_size + size, old_protect, &old_protect);
+
+                delete[] bytes_to_restore;
+
+                if(!absolute_jmp(addr, func, size))
+                    return false;
+
+                return true;
+            }
+        #endif
             
             bool IAT(std::string const& module_name, std::string const& func_name, LPVOID new_func, LPVOID out_old_func) 
             {
