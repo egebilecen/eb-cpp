@@ -12,6 +12,14 @@ namespace EB
     {
         namespace Hook
         {
+        #ifdef _WIN64
+            constexpr size_t ABSOLUTE_JUMP_HOOK_SIZE = 13;
+        #else
+            constexpr size_t RELATIVE_JUMP_HOOK_SIZE = 5;
+
+            constexpr size_t ABSOLUTE_JUMP_HOOK_SIZE = 8;
+        #endif
+
         #ifndef _WIN64
             bool relative_jmp(HANDLE const& handle, uintptr_t const& addr, LPVOID func, size_t const& size);
             bool relative_jmp(uintptr_t const& addr, LPVOID func, size_t const& size);
