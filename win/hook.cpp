@@ -8,14 +8,10 @@ namespace EB
         namespace Hook
         {
         #ifdef _WIN64
-            constexpr size_t ABSOLUTE_JUMP_HOOK_SIZE = 13;
-            static    BYTE   ABSOLUTE_JUMP_HOOK_BYTES[ABSOLUTE_JUMP_HOOK_SIZE] = { 0x49, 0xba, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x41, 0xff, 0xe2 };
+            static BYTE ABSOLUTE_JUMP_HOOK_BYTES[ABSOLUTE_JUMP_HOOK_SIZE] = { 0x49, 0xba, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x41, 0xff, 0xe2 };
         #else
-            constexpr size_t RELATIVE_JUMP_HOOK_SIZE = 5;
-            static    BYTE   RELATIVE_JUMP_HOOK_BYTES[RELATIVE_JUMP_HOOK_SIZE] = { 0xe9, 0x00, 0x00, 0x00, 0x00 };
-
-            constexpr size_t ABSOLUTE_JUMP_HOOK_SIZE = 8;
-            static    BYTE   ABSOLUTE_JUMP_HOOK_BYTES[ABSOLUTE_JUMP_HOOK_SIZE] = { 0x8d, 0x3d, 0x44, 0x33, 0x22, 0x11, 0xff, 0xe7 };
+            static BYTE RELATIVE_JUMP_HOOK_BYTES[RELATIVE_JUMP_HOOK_SIZE] = { 0xe9, 0x00, 0x00, 0x00, 0x00 };
+            static BYTE ABSOLUTE_JUMP_HOOK_BYTES[ABSOLUTE_JUMP_HOOK_SIZE] = { 0x8d, 0x3d, 0x44, 0x33, 0x22, 0x11, 0xff, 0xe7 };
         #endif
 
         #ifndef _WIN64 // x32
