@@ -10,8 +10,6 @@
 #include <chrono>
 #include <functional>
 
-#include "shellcode.h"
-
 namespace EB
 {
     namespace Windows
