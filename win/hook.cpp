@@ -14,9 +14,25 @@ namespace EB
             static BYTE ABSOLUTE_JUMP_HOOK_BYTES[ABSOLUTE_JUMP_HOOK_SIZE] = { 0x8d, 0x3d, 0x44, 0x33, 0x22, 0x11, 0xff, 0xe7 };
         #endif
 
+            uintptr_t trampoline(HANDLE const& handle, uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size)
+            {
+                if(size < ABSOLUTE_JUMP_HOOK_SIZE) return NULL;
+
+                BYTE* stolenBytes = new BYTE[size];
+                Memory::read(handle, stolenBytes, from_addr, size);
+
+                Hook::absolute_jmp(handle, from_addr, target_addr, size);
+
+                uintptr_t original_func = (uintptr_t)VirtualAllocEx(handle, NULL, size + ABSOLUTE_JUMP_HOOK_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+                Memory::write(handle, original_func, stolenBytes, size);
+                Hook::absolute_jmp(handle, original_func + size, from_addr + size, Hook::ABSOLUTE_JUMP_HOOK_SIZE);
+            
+                delete[] stolenBytes;
+                return original_func;
+            }
+
             uintptr_t trampoline(uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size)
             {
-            #ifdef _WIN64
                 if(size < ABSOLUTE_JUMP_HOOK_SIZE) return NULL;
 
                 BYTE* stolenBytes = new BYTE[size];
@@ -30,12 +46,26 @@ namespace EB
             
                 delete[] stolenBytes;
                 return original_func;
-            #else
-
-            #endif
             }
 
         #ifndef _WIN64 // x32
+            uintptr_t trampoline_relative(uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size)
+            {
+                if(size < RELATIVE_JUMP_HOOK_SIZE) return NULL;
+
+                BYTE* stolenBytes = new BYTE[size];
+                Memory::read(stolenBytes, from_addr, size);
+
+                Hook::relative_jmp(from_addr, target_addr, size);
+
+                uintptr_t original_func = (uintptr_t)VirtualAlloc(NULL, size + RELATIVE_JUMP_HOOK_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+                Memory::write(original_func, stolenBytes, size);
+                Hook::relative_jmp(original_func + size, from_addr + size, Hook::RELATIVE_JUMP_HOOK_SIZE);
+            
+                delete[] stolenBytes;
+                return original_func;
+            }
+
             bool relative_jmp(HANDLE const& handle, uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size)
             {
                 if(size < RELATIVE_JUMP_HOOK_SIZE) return false;

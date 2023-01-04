@@ -16,16 +16,18 @@ namespace EB
             constexpr size_t ABSOLUTE_JUMP_HOOK_SIZE = 13;
         #else
             constexpr size_t RELATIVE_JUMP_HOOK_SIZE = 5;
-
             constexpr size_t ABSOLUTE_JUMP_HOOK_SIZE = 8;
         #endif
-
+            
+            uintptr_t trampoline(HANDLE const& handle, uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size);
             uintptr_t trampoline(uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size);
 
-        #ifndef _WIN64
+        #ifndef _WIN64 // x32
+            uintptr_t trampoline_relative(uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size);
             bool relative_jmp(HANDLE const& handle, uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size);
             bool relative_jmp(uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size);
         #endif
+
             bool absolute_jmp(HANDLE const& handle, uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size);
             bool absolute_jmp(uintptr_t const& from_addr, uintptr_t const& target_addr, size_t const& size);
 
