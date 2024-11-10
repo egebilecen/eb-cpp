@@ -1,124 +1,92 @@
-#pragma once
-#include<map>
+#ifndef _FSM_H
+#define _FSM_H
 
-template <typename T>
-class FiniteStateMachine;
+#include <map>
 
-template<typename T>
-class State
-{
-protected:
-    FiniteStateMachine<T>* m_fsm;
-    std::map<T, State<T>*> m_transitionList;
-    T m_id;
+template <class StateId> class StateMachine;
 
-public:
-    explicit State(FiniteStateMachine<T>* fsm, T id)
-        : m_fsm(fsm)
-        , m_id(id)
-    {
+template <class StateId> class State {
+  protected:
+    StateId id_;
+    StateMachine<StateId> *fsm_;
+    std::map<StateId, State<StateId> *> transitions_;
+
+  public:
+    explicit State(StateMachine<StateId> *fsm, StateId id)
+        : fsm_(fsm), id_(id) {}
+
+    virtual ~State() {}
+
+    inline void add_transition(State<StateId> *state) {
+        transitions_[state->get_id()] = state;
     }
 
-    virtual ~State(){}
-
-    virtual void enter()
-    {
+    inline State<StateId> *get_transition(StateId id) {
+        return transitions_[id];
     }
 
-    virtual void exit()
-    {
-    }
+    inline StateId get_id() { return id_; }
 
-    virtual void update(void* data=nullptr)
-    {
-    }
+    virtual void on_enter() {}
 
-    inline T getID() const
-    {
-        return m_id;
-    }
+    virtual void on_update(void *data) {}
 
-    bool addTransition(State<T>* state)
-    {
-        T stateID = state->getID();
-
-        if(m_transitionList.count(stateID) > 0) return false;
-
-        m_transitionList[state->getID()] = state;
-        return true;
-    }
-
-    inline State<T>* getTransition(T stateID)
-    {
-        return m_transitionList[stateID];
-    }
+    virtual void on_exit() {}
 };
 
-template<typename T>
-class FiniteStateMachine
-{
-public:
-    FiniteStateMachine()
-        : m_currentState(nullptr)
-    {
-    }
+template <class StateId> class StateMachine {
+  protected:
+    std::map<StateId, State<StateId> *> states_;
+    State<StateId> *curr_state_;
 
-    ~FiniteStateMachine()
-    {
-        for(const auto& kv : m_stateList)
-            delete kv.second;
-    }
+  public:
+    StateMachine() : curr_state_(nullptr) {}
 
-    inline void update(void* data=nullptr)
-    {
-        m_currentState->update(data);
-    }
+    ~StateMachine() {
+		for (const auto& state : states_)
+			delete state.second;
+	}
 
-    template<class State_>
-    State_* addState()
-    {
-        State_* state = new State_(this);
+    template <class StateType> StateType *add_state() {
+        StateType *state = new StateType(this);
 
-        if(m_stateList.count(state->getID()) > 0)
-        {
+        if (states_.count(state->get_id())) {
             delete state;
             return nullptr;
         }
 
-        m_stateList[state->getID()] = state;
+        states_[state->get_id()] = state;
         return state;
     }
 
-    inline State<T>* getState(T stateId)
-    {
-        return m_stateList[stateId];
+    inline State<StateId> *get_state(StateId id) { return states_[id]; }
+
+    inline State<StateId> *get_curr_state() { return curr_state_; }
+
+    inline void update(void *data = nullptr) {
+        if (curr_state_)
+            curr_state_->on_update(data);
     }
 
-    inline State<T>* getCurrentState()
-    {
-        return m_currentState;
-    }
+    bool transition_to(StateId id) {
+        State<StateId> *state = states_[id];
 
-    bool transitionTo(T stateId)
-    {
-        State<T>* pStateTo = getState(stateId);
-        if(pStateTo == nullptr) return false;
+        if (!state)
+            return false;
 
-        if(m_currentState != nullptr)
-        {
-            if(stateId == m_currentState->getID()) return false;
-            if(m_currentState->getTransition(pStateTo->getID()) == nullptr) return false;
-            m_currentState->exit();
+        if (curr_state_) {
+            if (id == curr_state_->get_id()
+			|| !curr_state_->get_transition(id))
+                return false;
+
+            curr_state_->on_exit();
         }
 
-        m_currentState = pStateTo;
-        m_currentState->enter();
+        curr_state_ = state;
+        curr_state_->on_enter();
 
         return true;
     }
-
-protected:
-    std::map<T, State<T>*> m_stateList;
-    State<T>* m_currentState;
 };
 
+#endif
